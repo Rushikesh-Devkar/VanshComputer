@@ -8,6 +8,11 @@ const DEFAULT_BANNER = {
   description: 'Har laptop ki asli photos, battery health pehle se dikhai hui, aur seedha hamari team se support.',
   imageUrl: '',
   imagePublicId: '',
+  shopKicker: 'SHOP OFFERS',
+  shopTitle: 'Deals on laptops and accessories',
+  shopDescription: 'Fresh picks and offers from Vansh Computer.',
+  shopImageUrl: '',
+  shopImagePublicId: '',
 };
 
 const schema = z.object({
@@ -15,6 +20,10 @@ const schema = z.object({
   title: z.string().trim().min(1).max(220),
   description: z.string().trim().min(1).max(500),
   removeImage: z.enum(['true', 'false']).optional(),
+  shopKicker: z.string().trim().min(1).max(100).optional(),
+  shopTitle: z.string().trim().min(1).max(220).optional(),
+  shopDescription: z.string().trim().min(1).max(500).optional(),
+  removeShopImage: z.enum(['true', 'false']).optional(),
 });
 
 const isImage = (buffer) => {
@@ -24,9 +33,9 @@ const isImage = (buffer) => {
   return jpg || png || webp;
 };
 
-const uploadBuffer = (buffer) => new Promise((resolve, reject) => {
+const uploadBuffer = (buffer, folder) => new Promise((resolve, reject) => {
   const stream = cloudinary.uploader.upload_stream({
-    folder: 'vansh-computer/banners',
+    folder,
     resource_type: 'image',
     allowed_formats: ['jpg', 'png', 'webp'],
     transformation: [{ width: 2400, height: 1400, crop: 'limit' }],
@@ -42,10 +51,12 @@ exports.get = async (req, res, next) => {
 };
 
 exports.update = async (req, res, next) => {
-  let uploaded;
+  const uploaded = [];
   try {
     const fields = schema.parse(req.body);
-    if (req.file && !isImage(req.file.buffer)) {
+    const homeFile = req.files && req.files.image && req.files.image[0];
+    const shopFile = req.files && req.files.shopImage && req.files.shopImage[0];
+    if ([homeFile, shopFile].filter(Boolean).some((file) => !isImage(file.buffer))) {
       return res.status(400).json({ message: 'File valid JPG, PNG ya WebP image nahi hai' });
     }
 
@@ -57,16 +68,32 @@ exports.update = async (req, res, next) => {
       description: fields.description,
       imageUrl: previous ? previous.imageUrl : '',
       imagePublicId: previous ? previous.imagePublicId : '',
+      shopKicker: fields.shopKicker || previous && previous.shopKicker || DEFAULT_BANNER.shopKicker,
+      shopTitle: fields.shopTitle || previous && previous.shopTitle || DEFAULT_BANNER.shopTitle,
+      shopDescription: fields.shopDescription || previous && previous.shopDescription || DEFAULT_BANNER.shopDescription,
+      shopImageUrl: previous ? previous.shopImageUrl : '',
+      shopImagePublicId: previous ? previous.shopImagePublicId : '',
     };
 
     if (fields.removeImage === 'true') {
       nextBanner.imageUrl = '';
       nextBanner.imagePublicId = '';
     }
-    if (req.file) {
-      uploaded = await uploadBuffer(req.file.buffer);
-      nextBanner.imageUrl = uploaded.secure_url;
-      nextBanner.imagePublicId = uploaded.public_id;
+    if (fields.removeShopImage === 'true') {
+      nextBanner.shopImageUrl = '';
+      nextBanner.shopImagePublicId = '';
+    }
+    if (homeFile) {
+      const result = await uploadBuffer(homeFile.buffer, 'vansh-computer/banners/homepage');
+      uploaded.push(result);
+      nextBanner.imageUrl = result.secure_url;
+      nextBanner.imagePublicId = result.public_id;
+    }
+    if (shopFile) {
+      const result = await uploadBuffer(shopFile.buffer, 'vansh-computer/banners/shop');
+      uploaded.push(result);
+      nextBanner.shopImageUrl = result.secure_url;
+      nextBanner.shopImagePublicId = result.public_id;
     }
 
     const saved = await Banner.findByIdAndUpdate('homepage', { $set: nextBanner }, {
@@ -76,9 +103,13 @@ exports.update = async (req, res, next) => {
     if (oldPublicId && oldPublicId !== saved.imagePublicId) {
       cloudinary.uploader.destroy(oldPublicId).catch((e) => console.error('Old banner image cleanup failed:', e.message));
     }
+    const oldShopPublicId = previous && previous.shopImagePublicId;
+    if (oldShopPublicId && oldShopPublicId !== saved.shopImagePublicId) {
+      cloudinary.uploader.destroy(oldShopPublicId).catch((e) => console.error('Old shop banner cleanup failed:', e.message));
+    }
     res.json({ ...DEFAULT_BANNER, ...saved.toObject() });
   } catch (e) {
-    if (uploaded) await cloudinary.uploader.destroy(uploaded.public_id).catch(() => {});
+    await Promise.allSettled(uploaded.map((result) => cloudinary.uploader.destroy(result.public_id)));
     next(e);
   }
 };
