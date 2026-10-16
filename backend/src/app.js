@@ -10,7 +10,7 @@ const app = express();
 app.set('trust proxy', 1);
 const frontendDir = path.join(__dirname, '..', '..', 'frontend');
 app.use(express.static(frontendDir));
-app.get('/', (req, res) => res.sendFile(path.join(frontendDir, 'Homepage.html')));
+app.get('/', (req, res) => res.sendFile(path.join(frontendDir, 'index.html')));
 app.use(helmet());
 
 // Cookies ke saath cors mein origin ki list zaroori hai, "sab allow" nahi
@@ -25,6 +25,7 @@ app.get('/health', (req, res) => res.json({ status: 'ok', time: new Date().toISO
 app.use('/api/auth', require('./modules/auth/auth.routes'));
 app.use('/api/products', require('./modules/products/product.routes'));
 app.use('/api/leads', require('./modules/leads/lead.routes'));
+app.use('/api/banner', require('./modules/banner/banner.routes'));
 
 app.use(notFound);
 app.use(errorHandler);
