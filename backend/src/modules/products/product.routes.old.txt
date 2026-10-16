@@ -1,0 +1,11 @@
+const router = require('express').Router();
+const adminKey = require('../../middleware/adminKey');
+const c = require('./product.controller');
+
+router.get('/', c.list);
+router.get('/:slug', c.getOne);
+router.post('/', adminKey, c.create);
+router.patch('/:id', adminKey, c.update);
+router.delete('/:id', adminKey, c.archive);
+
+module.exports = router;

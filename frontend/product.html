@@ -1,0 +1,111 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Laptop | Vansh Computer</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/site.css">
+<style>
+.pd{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:40px;align-items:start;margin-top:24px}
+.main-ph{background:var(--bg);border-radius:16px;aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;color:#8a8a8a;overflow:hidden}
+.main-ph img{width:100%;height:100%;object-fit:contain}
+.thumbs{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap}
+.thumbs img{width:80px;height:60px;object-fit:cover;border-radius:8px;border:2px solid transparent;cursor:pointer}
+.thumbs img.on{border-color:var(--red)}
+.row{display:flex;justify-content:space-between;gap:16px;padding:10px 0;border-bottom:1px solid #eee;font-size:15px}
+.row span:first-child{color:var(--muted)}
+.box{background:var(--bg);border-radius:14px;padding:20px;margin-top:20px;display:flex;flex-direction:column;gap:10px}
+h2{font-size:22px;margin:32px 0 8px}
+</style>
+</head>
+<body>
+<div id="hdr"></div>
+<main class="wrap" id="app"><p class="muted">Loading...</p></main>
+<div id="ftr"></div>
+<script src="js/common.js"></script>
+<script>
+renderChrome();
+const app = document.getElementById('app');
+const slug = new URLSearchParams(location.search).get('slug');
+
+function render(p) {
+  document.title = p.name + ' | Vansh Computer';
+  const sold = p.status === 'sold' || p.stock < 1;
+  const r = p.refurbished;
+  const photos = p.images || [];
+
+  const mainPh = h('div', { class: 'main-ph' }, photos[0] ? h('img', { src: img(photos[0].url, 1000), alt: photos[0].alt || p.name }) : 'Photo jald aayegi');
+  const thumbs = h('div', { class: 'thumbs' }, photos.length > 1 ? photos.map((ph, i) => h('img', {
+    src: img(ph.url, 200), alt: ph.alt || p.name, class: i === 0 ? 'on' : '',
+    onclick: (ev) => {
+      mainPh.replaceChildren(h('img', { src: img(ph.url, 1000), alt: ph.alt || p.name }));
+      thumbs.querySelectorAll('img').forEach((x) => x.classList.remove('on'));
+      ev.target.classList.add('on');
+    },
+  })) : []);
+
+  // Hold form
+  const phone = h('input', { class: 'f', type: 'tel', placeholder: '+91 XXXXX XXXXX', autocomplete: 'tel', 'aria-label': 'Mobile number' });
+  const consent = h('input', { type: 'checkbox', style: 'margin-top:3px;width:18px;height:18px' });
+  const msg = h('p', { class: 'muted', role: 'status' });
+  const btn = h('button', { class: 'btn', type: 'submit' }, 'Request Callback');
+  const form = h('form', { class: 'box' },
+    h('b', {}, 'Is laptop ko 24 ghante ke liye hold karwao'),
+    h('span', { class: 'muted' }, 'Ye ek hi piece hai. Number daalo, hamari team call ya WhatsApp pe confirm karegi.'),
+    phone,
+    h('label', { class: 'muted', style: 'display:flex;gap:10px;align-items:flex-start' }, consent, 'Mujhe is laptop ke baare mein call ya WhatsApp pe contact kiya jaye.'),
+    btn, msg);
+  form.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    msg.textContent = '';
+    btn.disabled = true;
+    try {
+      const res = await api('/api/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: phone.value, productId: p._id, enquiryType: 'hold-request', source: 'product-page', contactConsent: consent.checked, marketingConsent: false }),
+      });
+      msg.textContent = res.message;
+      form.reset();
+    } catch (e) {
+      msg.textContent = e.data && e.data.errors ? e.data.errors.map((x) => x.message).join(', ') : e.message;
+    } finally { btn.disabled = false; }
+  });
+
+  const wa = /^\d{12}$/.test(STORE.whatsapp)
+    ? h('a', { class: 'btn line', target: '_blank', rel: 'noopener', href: 'https://wa.me/' + STORE.whatsapp + '?text=' + encodeURIComponent('Hi, mujhe ' + p.name + ' ke baare mein jaanna hai') }, 'Ask on WhatsApp')
+    : null;
+
+  const spec = (k, v) => v ? h('div', { class: 'row' }, h('span', {}, k), h('span', {}, v)) : null;
+
+  app.replaceChildren(
+    h('div', { class: 'pd' },
+      h('div', {}, mainPh, thumbs),
+      h('div', {},
+        h('div', {}, p.type === 'refurbished' && r ? [h('span', { class: 'badge' }, 'Grade ' + r.grade), r.batteryHealth != null ? h('span', { class: 'badge red' }, 'Battery health ' + r.batteryHealth + '%') : null, h('span', { class: 'badge red' }, 'Refurbished')] : h('span', { class: 'badge' }, 'New')),
+        h('h1', { style: 'margin-top:12px' }, p.name),
+        h('p', { class: 'muted' }, [p.specs.cpu, p.specs.ram, p.specs.storage].join(' · ') + ' · SKU: ' + p.sku),
+        h('p', { class: 'price', style: 'font-size:32px;margin:12px 0 4px' }, sold ? 'Sold out' : rupee(p.price)),
+        h('p', { class: 'muted' }, sold ? 'Ye laptop bik chuka hai.' : (p.type === 'refurbished' ? 'Sirf 1 piece available · ' : '') + p.warrantyMonths + ' months warranty · Online payment'),
+        wa ? h('div', { style: 'margin-top:12px' }, wa) : null,
+        sold ? null : form)),
+    h('h2', {}, 'Specifications'),
+    spec('Brand', p.brand), spec('Processor', p.specs.cpu), spec('RAM', p.specs.ram), spec('Storage', p.specs.storage),
+    spec('Graphics', p.specs.gpu), spec('Display', p.specs.screen), spec('Operating system', p.specs.os), spec('Warranty', p.warrantyMonths + ' months'),
+    r && (r.cosmeticNotes || (r.inspectionChecklist || []).length || (r.includedAccessories || []).length) ? [
+      h('h2', {}, 'Condition aur inspection'),
+      r.cosmeticNotes ? h('p', { class: 'muted' }, r.cosmeticNotes) : null,
+      (r.inspectionChecklist || []).map((x) => h('div', { class: 'row' }, h('span', {}, '✓ ' + x), h('span', {}, ''))),
+      (r.includedAccessories || []).length ? h('p', { class: 'muted' }, 'Box mein: ' + r.includedAccessories.join(', ')) : null,
+    ] : null);
+}
+
+(async () => {
+  if (!slug) { app.replaceChildren(h('p', { class: 'muted' }, 'Laptop nahi mila.')); return; }
+  try { render(await api('/api/products/' + encodeURIComponent(slug))); }
+  catch (e) { app.replaceChildren(h('p', { class: 'muted' }, e.message)); }
+})();
+</script>
+</body>
+</html>

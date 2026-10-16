@@ -1,0 +1,4 @@
+const { requireAuth, requireRole } = require('../../middleware/auth');
+// ...
+router.get('/', requireAuth, requireRole('owner', 'manager', 'sales'), c.list);
+router.patch('/:id', requireAuth, requireRole('owner', 'manager', 'sales'), c.update);

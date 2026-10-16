@@ -1,0 +1,131 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vansh Computer | Certified Refurbished Laptops</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/site.css">
+<style>
+.hero{background:#111;color:#fff;padding:clamp(40px,8vw,88px) 0}
+.hero .k{color:#ff6b70;font-weight:700;letter-spacing:1px;font-size:14px;margin:0 0 12px}
+.hero h2{font-size:clamp(28px,5.5vw,52px);line-height:1.1;margin:0 0 16px;font-weight:800;max-width:820px}
+.hero .sub{color:#d4d4d4;font-size:17px;line-height:1.6;max-width:640px;margin:0 0 28px}
+.cta{display:flex;flex-wrap:wrap;gap:12px}
+.hero .btn.line{background:transparent;color:#fff;border-color:#fff}
+.trust{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));margin:32px 0}
+.trust div{border:1px solid var(--line);border-radius:14px;padding:18px}
+.trust b{display:block;margin-bottom:4px}
+.sech{font-size:clamp(22px,3vw,28px);font-weight:800;margin:40px 0 16px}
+.tiles{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.tile{border-radius:16px;padding:28px 24px;min-height:120px;display:flex;flex-direction:column;justify-content:flex-end;background:var(--bg)}
+.tile.red{background:var(--red);color:#fff}.tile.dark{background:#111;color:#fff}
+.tile small{opacity:.85;font-size:14px}
+.chips{display:flex;flex-wrap:wrap;gap:12px}
+.chip{display:inline-flex;align-items:center;min-height:44px;padding:0 18px;border:1px solid #d4d4d4;border-radius:99px;font-weight:600;font-size:14px}
+.chip:hover{border-color:var(--red);color:var(--red)}
+.brands{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
+.brands a{background:var(--bg);border-radius:14px;padding:22px;text-align:center;font-weight:800;font-size:20px}
+.brands a:hover{color:var(--red)}
+.cb{background:var(--bg);border-radius:16px;padding:clamp(20px,4vw,36px);display:grid;gap:24px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));align-items:center;margin-top:40px}
+.cb form{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:10px}
+.store{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.store div{border:1px solid var(--line);border-radius:14px;padding:18px;line-height:1.8}
+</style>
+</head>
+<body>
+<div id="hdr"></div>
+
+<section class="hero"><div class="wrap">
+  <p class="k">CERTIFIED REFURBISHED LAPTOPS</p>
+  <h2>Quality-checked laptops. Honest grades. 6 months warranty.</h2>
+  <p class="sub">Har laptop ki asli photos, battery health pehle se dikhai hui, aur seedha hamari team se support.</p>
+  <div class="cta"><a class="btn" href="shop.html?type=refurbished">Shop Refurbished</a><a class="btn line" href="#callback">Get a Callback</a></div>
+</div></section>
+
+<main class="wrap">
+  <div class="trust">
+    <div><b>Multi-point inspection</b><span class="muted">Har laptop listing se pehle test hota hai.</span></div>
+    <div><b>6 months warranty</b><span class="muted">Clear terms, har product page pe likhe hue.</span></div>
+    <div><b>Safe delivery</b><span class="muted">Secure packaging aur order tracking.</span></div>
+    <div><b>Real person se baat</b><span class="muted">Khareedne se pehle call ya WhatsApp karo.</span></div>
+  </div>
+
+  <h3 class="sech" style="margin-top:8px">Shop by category</h3>
+  <div class="tiles">
+    <a class="tile red" href="shop.html?type=refurbished"><b style="font-size:20px">Refurbished Laptops</b><small>Hamari best deals</small></a>
+    <a class="tile dark" href="shop.html?type=new"><b style="font-size:20px">New Laptops</b><small>Sealed, brand warranty</small></a>
+  </div>
+
+  <h3 class="sech">Shop by budget</h3>
+  <div class="chips">
+    <a class="chip" href="shop.html?type=refurbished&maxPrice=20000">Under ₹20,000</a>
+    <a class="chip" href="shop.html?type=refurbished&maxPrice=30000">Under ₹30,000</a>
+    <a class="chip" href="shop.html?type=refurbished&maxPrice=40000">Under ₹40,000</a>
+    <a class="chip" href="shop.html?type=refurbished">Sab refurbished</a>
+  </div>
+
+  <h3 class="sech">Shop by brand</h3>
+  <div class="brands">
+    <a href="shop.html?brand=Dell">Dell</a><a href="shop.html?brand=HP">HP</a><a href="shop.html?brand=Lenovo">Lenovo</a>
+    <a href="shop.html?brand=Apple">Apple</a><a href="shop.html?brand=Acer">Acer</a><a href="shop.html?brand=ASUS">ASUS</a>
+  </div>
+
+  <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px">
+    <h3 class="sech">Latest refurbished arrivals</h3>
+    <a href="shop.html?type=refurbished" style="color:var(--red);font-weight:700">View all</a>
+  </div>
+  <div id="latest" class="grid"><p class="muted">Loading...</p></div>
+
+  <section id="callback" class="cb">
+    <div>
+      <h3 class="sech" style="margin:0 0 10px">Laptop chuna nahi? Hum madad karenge.</h3>
+      <p class="muted" style="font-size:16px">Number daalo, hamari team call ya WhatsApp pe aapke budget ke hisaab se laptop suggest karegi.</p>
+    </div>
+    <form id="cbForm">
+      <label for="cbPhone" style="font-weight:700;font-size:14px">Mobile number</label>
+      <input id="cbPhone" class="f" type="tel" placeholder="+91 XXXXX XXXXX" autocomplete="tel">
+      <label class="muted" style="display:flex;gap:10px;align-items:flex-start"><input id="cbConsent" type="checkbox" style="margin-top:3px;width:18px;height:18px">Mujhe call ya WhatsApp pe contact kiya jaye.</label>
+      <button class="btn" type="submit" id="cbBtn">Request Callback</button>
+      <p id="cbMsg" class="muted" role="status"></p>
+    </form>
+  </section>
+
+  <h3 class="sech">Visit our store</h3>
+  <div class="store">
+    <div><b>Vansh Computer</b><br>[SHOP ADDRESS], [CITY], [PIN CODE]</div>
+    <div>Call: [PHONE NUMBER]<br>Email: [EMAIL]<br>Open daily [TIMING]</div>
+  </div>
+</main>
+
+<div id="ftr"></div>
+<script src="js/common.js"></script>
+<script>
+renderChrome();
+const latest = document.getElementById('latest');
+(async () => {
+  try {
+    const items = listOf(await api('/api/products?type=refurbished&sort=newest')).slice(0, 8);
+    latest.replaceChildren(...(items.length ? items.map(productCard) : [h('p', { class: 'muted' }, 'Naye laptops jald aa rahe hain.')]));
+  } catch (e) { latest.replaceChildren(h('p', { class: 'muted' }, e.message)); }
+})();
+
+document.getElementById('cbForm').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const msg = document.getElementById('cbMsg'), btn = document.getElementById('cbBtn');
+  msg.textContent = ''; btn.disabled = true;
+  try {
+    const res = await api('/api/leads', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: document.getElementById('cbPhone').value, enquiryType: 'callback', source: 'homepage', contactConsent: document.getElementById('cbConsent').checked, marketingConsent: false }),
+    });
+    msg.textContent = res.message;
+    ev.target.reset();
+  } catch (e) {
+    msg.textContent = e.data && e.data.errors ? e.data.errors.map((x) => x.message).join(', ') : e.message;
+  } finally { btn.disabled = false; }
+});
+</script>
+</body>
+</html>

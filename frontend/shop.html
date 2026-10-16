@@ -1,0 +1,66 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Laptops | Vansh Computer</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+<div id="hdr"></div>
+<main class="wrap">
+  <h1 id="title">Laptops</h1>
+  <div class="filters">
+    <select id="type"><option value="">Sab laptops</option><option value="refurbished">Refurbished</option><option value="new">New</option></select>
+    <select id="grade"><option value="">Koi bhi grade</option><option value="A">Grade A</option><option value="B">Grade B</option><option value="C">Grade C</option></select>
+    <select id="sort"><option value="newest">Naye pehle</option><option value="priceAsc">Sasta pehle</option><option value="priceDesc">Mehnga pehle</option></select>
+    <input id="q" type="search" placeholder="Brand ya model">
+    <input id="max" type="number" min="0" placeholder="Max price ₹">
+  </div>
+  <div id="grid" class="grid"></div>
+</main>
+<div id="ftr"></div>
+<script src="js/common.js"></script>
+<script>
+renderChrome();
+const f = { type: type, grade: grade, sort: sort, q: q, max: max };
+f.type.value = new URLSearchParams(location.search).get('type') || '';
+
+function card(p) {
+  const cover = p.images && p.images[0];
+  const sold = p.status === 'sold' || p.stock < 1;
+  const r = p.refurbished;
+  return h('a', { class: 'card', href: 'product.html?slug=' + encodeURIComponent(p.slug) },
+    h('div', { class: 'ph' }, cover ? h('img', { src: img(cover.url, 600), alt: cover.alt || p.name, loading: 'lazy' }) : 'Photo jald aayegi'),
+    h('div', { class: 'bd' },
+      h('div', {},
+        p.type === 'refurbished' && r ? [h('span', { class: 'badge' }, 'Grade ' + r.grade), r.batteryHealth != null ? h('span', { class: 'badge red' }, 'Battery ' + r.batteryHealth + '%') : null] : h('span', { class: 'badge' }, 'New')),
+      h('b', {}, p.name),
+      h('span', { class: 'muted' }, [p.specs.cpu, p.specs.ram, p.specs.storage].join(' · ')),
+      h('span', { class: 'price' }, sold ? 'Sold' : rupee(p.price))));
+}
+
+async function load() {
+  const p = new URLSearchParams();
+  if (f.type.value) p.set('type', f.type.value);
+  if (f.grade.value) p.set('grade', f.grade.value);
+  if (f.sort.value) p.set('sort', f.sort.value);
+  if (f.q.value.trim()) p.set('q', f.q.value.trim());
+  if (f.max.value) p.set('maxPrice', f.max.value);
+  grid.replaceChildren(h('p', { class: 'muted' }, 'Loading...'));
+  try {
+    const data = await api('/api/products?' + p);
+    title.textContent = f.type.value === 'refurbished' ? 'Refurbished Laptops' : f.type.value === 'new' ? 'New Laptops' : 'Laptops';
+    grid.replaceChildren(...(data.items.length ? data.items.map(card) : [h('p', { class: 'muted' }, 'Is filter mein koi laptop nahi mila.')]));
+  } catch (e) {
+    grid.replaceChildren(h('p', { class: 'muted' }, e.message));
+  }
+}
+
+let t;
+Object.values(f).forEach((el) => el.addEventListener(el.tagName === 'INPUT' ? 'input' : 'change', () => { clearTimeout(t); t = setTimeout(load, 300); }));
+load();
+</script>
+</body>
+</html>
