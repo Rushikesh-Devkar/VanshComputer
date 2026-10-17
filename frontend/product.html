@@ -51,8 +51,8 @@ function render(p) {
   const msg = h('p', { class: 'muted', role: 'status' });
   const btn = h('button', { class: 'btn', type: 'submit' }, 'Request Callback');
   const form = h('form', { class: 'box' },
-    h('b', {}, 'Is laptop ko 24 ghante ke liye hold karwao'),
-    h('span', { class: 'muted' }, 'Ye ek hi piece hai. Number daalo, hamari team call ya WhatsApp pe confirm karegi.'),
+    h('b', {}, 'Is product ke baare mein poochhein'),
+    h('span', { class: 'muted' }, 'Number daalo, hamari team call ya WhatsApp pe details confirm karegi.'),
     phone,
     h('label', { class: 'muted', style: 'display:flex;gap:10px;align-items:flex-start' }, consent, 'Mujhe is laptop ke baare mein call ya WhatsApp pe contact kiya jaye.'),
     btn, msg);
@@ -83,14 +83,17 @@ function render(p) {
     h('div', { class: 'pd' },
       h('div', {}, mainPh, thumbs),
       h('div', {},
-        h('div', {}, p.type === 'refurbished' && r ? [h('span', { class: 'badge' }, 'Grade ' + r.grade), r.batteryHealth != null ? h('span', { class: 'badge red' }, 'Battery health ' + r.batteryHealth + '%') : null, h('span', { class: 'badge red' }, 'Refurbished')] : h('span', { class: 'badge' }, 'New')),
+        h('div', {}, p.type === 'refurbished' ? [r && r.grade ? h('span', { class: 'badge' }, 'Grade ' + r.grade) : null, r && r.batteryHealth != null ? h('span', { class: 'badge red' }, 'Battery health ' + r.batteryHealth + '%') : null, h('span', { class: 'badge red' }, 'Refurbished')] : h('span', { class: 'badge' }, 'New')),
         h('h1', { style: 'margin-top:12px' }, p.name),
-        h('p', { class: 'muted' }, [p.specs.cpu, p.specs.ram, p.specs.storage].join(' · ') + ' · SKU: ' + p.sku),
+        h('p', { class: 'muted' }, [p.specs && p.specs.cpu, p.specs && p.specs.ram, p.specs && p.specs.storage].filter(Boolean).join(' · ') + (p.sku ? ' · SKU: ' + p.sku : '')),
         h('p', { class: 'price', style: 'font-size:32px;margin:12px 0 4px' }, sold ? 'Sold out' : rupee(p.price)),
         h('p', { class: 'muted' }, sold ? 'Ye laptop bik chuka hai.' : (p.type === 'refurbished' ? 'Sirf 1 piece available · ' : '') + p.warrantyMonths + ' months warranty · Online payment'),
         wa ? h('div', { style: 'margin-top:12px' }, wa) : null,
         sold ? null : form)),
-    h('h2', {}, 'Specifications'),
+    p.description ? h('p', { class: 'muted', style: 'margin-top:18px;white-space:pre-line' }, p.description) : null,
+    h('h2', {}, 'Product details'),
+    spec('Section', p.section === 'accessories' ? 'Accessories' : 'Laptops'),
+    spec('Category', p.subcategory || p.category),
     spec('Brand', p.brand), spec('Processor', p.specs.cpu), spec('RAM', p.specs.ram), spec('Storage', p.specs.storage),
     spec('Graphics', p.specs.gpu), spec('Display', p.specs.screen), spec('Operating system', p.specs.os), spec('Warranty', p.warrantyMonths + ' months'),
     r && (r.cosmeticNotes || (r.inspectionChecklist || []).length || (r.includedAccessories || []).length) ? [

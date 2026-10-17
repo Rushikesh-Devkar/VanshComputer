@@ -1,66 +1,120 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Laptops | Vansh Computer</title>
+<title>Shop | Vansh Computer</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/site.css">
+<style>
+.shop-banner{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(240px,.9fr);gap:28px;align-items:center;background:linear-gradient(115deg,#0F172A,#172554 60%,#2563EB);border-radius:18px;color:#fff;padding:clamp(24px,5vw,52px);margin:26px 0}.shop-banner.no-image{grid-template-columns:1fr}.shop-banner small{color:#BFDBFE;font-weight:700;letter-spacing:1px}.shop-banner h2{font-size:clamp(28px,4.5vw,46px);line-height:1.1;margin:10px 0}.shop-banner p{color:#E2E8F0;line-height:1.6;white-space:pre-line}.shop-banner img{width:100%;max-height:300px;object-fit:contain;border-radius:12px}.shop-banner img[hidden]{display:none}.category-links{display:flex;gap:9px;flex-wrap:wrap;margin:18px 0}.category-links a{border:1px solid var(--line);border-radius:99px;padding:9px 14px;font-size:14px;font-weight:700}.category-links a.active,.category-links a:hover{background:var(--accent);border-color:var(--accent);color:#fff}.filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));align-items:end}.filters label{display:grid;gap:6px;color:var(--muted);font-size:12px;font-weight:700}.filters select,.filters input{width:100%;min-width:0}.filter-group{display:flex;gap:7px}.filter-group input{min-width:0}
+@media(max-width:700px){.shop-banner{grid-template-columns:1fr}.shop-banner img{max-height:220px}}
+</style>
 </head>
 <body>
 <div id="hdr"></div>
 <main class="wrap">
-  <h1 id="title">Laptops</h1>
-  <div class="filters">
-    <select id="type"><option value="">Sab laptops</option><option value="refurbished">Refurbished</option><option value="new">New</option></select>
-    <select id="grade"><option value="">Koi bhi grade</option><option value="A">Grade A</option><option value="B">Grade B</option><option value="C">Grade C</option></select>
-    <select id="sort"><option value="newest">Naye pehle</option><option value="priceAsc">Sasta pehle</option><option value="priceDesc">Mehnga pehle</option></select>
-    <input id="q" type="search" placeholder="Brand ya model">
-    <input id="max" type="number" min="0" placeholder="Max price ₹">
+  <section class="shop-banner no-image" id="shopBanner">
+    <div><small id="shopKicker">SHOP OFFERS</small><h2 id="shopTitle">Deals on laptops and accessories</h2><p id="shopDescription">Fresh picks and offers from Vansh Computer.</p><div class="cta"><a class="btn" href="#filters">Browse products</a><a class="btn line" href="shop.html?section=accessories">Accessories</a></div></div>
+    <img id="shopBannerImage" alt="Shop offer" hidden>
+  </section>
+  <h1 id="title">All products</h1>
+  <nav class="category-links" aria-label="Shop sections">
+    <a href="shop.html" data-section="all">All products</a>
+    <a href="shop.html?section=laptop" data-section="laptop">Laptops</a>
+    <a href="shop.html?section=accessories" data-section="accessories">Accessories</a>
+    <a href="shop.html?category=desktop">Desktops</a>
+    <a href="shop.html?category=monitor">Monitors</a>
+    <a href="shop.html?category=printer">Printers</a>
+    <a href="shop.html?category=tablet">Tablets / iPad</a>
+  </nav>
+  <nav class="category-links" id="accessoryLinks" aria-label="Accessory categories" hidden>
+    <a href="shop.html?section=accessories">All accessories</a>
+    <a href="shop.html?section=accessories&subcategory=mouse">Mouse</a>
+    <a href="shop.html?section=accessories&subcategory=keyboard">Keyboard</a>
+    <a href="shop.html?section=accessories&subcategory=keypad">Keypad</a>
+    <a href="shop.html?section=accessories&subcategory=printer">Printer</a>
+    <a href="shop.html?section=accessories&subcategory=charger">Charger</a>
+    <a href="shop.html?section=accessories&subcategory=bag">Bag</a>
+    <a href="shop.html?section=accessories&subcategory=mouse%20pad">Mouse pad</a>
+    <a href="shop.html?section=accessories&subcategory=laptop%20stand">Laptop stand</a>
+    <a href="shop.html?section=accessories&subcategory=headphones">Headphones</a>
+    <a href="shop.html?section=accessories&subcategory=bluetooth%20speaker">Bluetooth</a>
+    <a href="shop.html?section=accessories&subcategory=tablet">iPad / Tablet</a>
+  </nav>
+  <div class="filters" id="filters">
+    <label>Search product<input id="search" type="search" placeholder="Brand, model, SKU"></label>
+    <label>Section<select id="section"><option value="">All sections</option><option value="laptop">Laptops</option><option value="accessories">Accessories</option></select></label>
+    <label>Product type<select id="category"><option value="">All types</option><option value="desktop">Desktop</option><option value="monitor">Monitor</option><option value="printer">Printer</option><option value="tablet">Tablet / iPad</option></select></label>
+    <label id="subcategoryFilter">Accessory type<select id="subcategory"><option value="">All accessories</option><option>mouse</option><option>keyboard</option><option>keypad</option><option>printer</option><option>charger</option><option>bag</option><option>mouse pad</option><option>laptop stand</option><option>headphones</option><option>bluetooth speaker</option><option>earbuds</option><option>tablet</option><option>webcam</option><option>cable</option><option>adapter</option></select></label>
+    <label>Condition<select id="type"><option value="">New + refurbished</option><option value="new">New</option><option value="refurbished">Refurbished</option></select></label>
+    <label>Brand<select id="brand"><option value="">All brands</option></select></label>
+    <label>Price range (₹)<span class="filter-group"><input id="minPrice" type="number" min="0" placeholder="Min"><input id="maxPrice" type="number" min="0" placeholder="Max"></span></label>
+    <label>Storage range (GB)<span class="filter-group"><input id="minStorage" type="number" min="0" placeholder="Min"><input id="maxStorage" type="number" min="0" placeholder="Max"></span></label>
+    <label>RAM<select id="ram"><option value="">Any RAM</option><option value="4">4 GB</option><option value="8">8 GB</option><option value="16">16 GB</option><option value="32">32 GB+</option></select></label>
+    <label>Processor<input id="cpu" type="search" placeholder="Intel Core i5, Ryzen 5"></label>
+    <label>Graphics / GPU<input id="gpu" type="search" placeholder="Intel, RTX, Radeon"></label>
+    <label>Display<input id="screen" type="search" placeholder="14 inch, FHD, OLED"></label>
+    <label>Availability<select id="inStock"><option value="">All stock</option><option value="1">In stock only</option></select></label>
+    <label>Refurbished grade<select id="grade"><option value="">Any grade</option><option value="A">Grade A</option><option value="B">Grade B</option><option value="C">Grade C</option></select></label>
+    <label>Sort by<select id="sort"><option value="newest">Newest</option><option value="priceAsc">Price: low to high</option><option value="priceDesc">Price: high to low</option></select></label>
   </div>
-  <div id="grid" class="grid"></div>
+  <div id="grid" class="grid" style="margin-top:24px"></div>
 </main>
 <div id="ftr"></div>
 <script src="js/common.js"></script>
 <script>
 renderChrome();
-const f = { type: type, grade: grade, sort: sort, q: q, max: max };
-f.type.value = new URLSearchParams(location.search).get('type') || '';
-
-function card(p) {
-  const cover = p.images && p.images[0];
-  const sold = p.status === 'sold' || p.stock < 1;
-  const r = p.refurbished;
-  return h('a', { class: 'card', href: 'product.html?slug=' + encodeURIComponent(p.slug) },
-    h('div', { class: 'ph' }, cover ? h('img', { src: img(cover.url, 600), alt: cover.alt || p.name, loading: 'lazy' }) : 'Photo jald aayegi'),
-    h('div', { class: 'bd' },
-      h('div', {},
-        p.type === 'refurbished' && r ? [h('span', { class: 'badge' }, 'Grade ' + r.grade), r.batteryHealth != null ? h('span', { class: 'badge red' }, 'Battery ' + r.batteryHealth + '%') : null] : h('span', { class: 'badge' }, 'New')),
-      h('b', {}, p.name),
-      h('span', { class: 'muted' }, [p.specs.cpu, p.specs.ram, p.specs.storage].join(' · ')),
-      h('span', { class: 'price' }, sold ? 'Sold' : rupee(p.price))));
+const qs = new URLSearchParams(location.search);
+const fields = ['search','section','category','subcategory','type','brand','minPrice','maxPrice','minStorage','maxStorage','ram','cpu','gpu','screen','inStock','grade','sort'];
+const f = Object.fromEntries(fields.map((id) => [id, document.getElementById(id)]));
+for (const id of fields) if (qs.has(id)) f[id].value = qs.get(id);
+if (qs.has('brand') && ![...f.brand.options].some((option) => option.value.toLowerCase() === qs.get('brand').toLowerCase())) f.brand.add(new Option(qs.get('brand'), qs.get('brand')));
+if (qs.has('q')) f.search.value = qs.get('q');
+const section = qs.get('section') || '';
+document.getElementById('accessoryLinks').hidden = section !== 'accessories';
+document.getElementById('subcategoryFilter').hidden = section !== 'accessories';
+document.getElementById('title').textContent = section === 'accessories' ? 'Accessories' : section === 'laptop' ? 'Laptops' : 'All products';
+if (qs.has('category') && qs.get('category') !== 'accessories' && qs.get('category') !== 'laptop') {
+  const label = { desktop: 'Desktops', monitor: 'Monitors', printer: 'Printers', tablet: 'Tablets / iPad' }[qs.get('category')];
+  if (label) document.getElementById('title').textContent = label;
 }
+document.querySelectorAll('[data-section]').forEach((link) => { if (link.dataset.section === (section || 'all')) link.classList.add('active'); });
+
+async function loadShopBanner() {
+  try {
+    const banner = await api('/api/banner');
+    document.getElementById('shopKicker').textContent = banner.shopKicker;
+    document.getElementById('shopTitle').textContent = banner.shopTitle;
+    document.getElementById('shopDescription').textContent = banner.shopDescription;
+    if (banner.shopImageUrl) {
+      const image = document.getElementById('shopBannerImage'); image.src = banner.shopImageUrl; image.hidden = false;
+      document.getElementById('shopBanner').classList.remove('no-image');
+    }
+  } catch (error) { console.error('Shop banner load failed:', error.message); }
+}
+loadShopBanner();
 
 async function load() {
-  const p = new URLSearchParams();
-  if (f.type.value) p.set('type', f.type.value);
-  if (f.grade.value) p.set('grade', f.grade.value);
-  if (f.sort.value) p.set('sort', f.sort.value);
-  if (f.q.value.trim()) p.set('q', f.q.value.trim());
-  if (f.max.value) p.set('maxPrice', f.max.value);
-  grid.replaceChildren(h('p', { class: 'muted' }, 'Loading...'));
+  const params = new URLSearchParams();
+  for (const id of fields) if (f[id].value) params.set(id === 'search' ? 'q' : id, f[id].value.trim());
+  const grid = document.getElementById('grid'); grid.replaceChildren(h('p', { class: 'muted' }, 'Loading...'));
   try {
-    const data = await api('/api/products?' + p);
-    title.textContent = f.type.value === 'refurbished' ? 'Refurbished Laptops' : f.type.value === 'new' ? 'New Laptops' : 'Laptops';
-    grid.replaceChildren(...(data.items.length ? data.items.map(card) : [h('p', { class: 'muted' }, 'Is filter mein koi laptop nahi mila.')]));
-  } catch (e) {
-    grid.replaceChildren(h('p', { class: 'muted' }, e.message));
-  }
+    const items = listOf(await api('/api/products?' + params));
+    grid.replaceChildren(...(items.length ? items.map(productCard) : [h('p', { class: 'muted' }, 'Is filter mein koi product nahi mila.')]));
+  } catch (error) { grid.replaceChildren(h('p', { class: 'muted' }, error.message)); }
 }
-
-let t;
-Object.values(f).forEach((el) => el.addEventListener(el.tagName === 'INPUT' ? 'input' : 'change', () => { clearTimeout(t); t = setTimeout(load, 300); }));
-load();
+async function loadBrands() {
+  try {
+    const items = listOf(await api('/api/products'));
+    const brands = [...new Set(items.map((item) => item.brand).filter(Boolean))].sort();
+    for (const value of brands) if (![...f.brand.options].some((option) => option.value.toLowerCase() === value.toLowerCase())) f.brand.add(new Option(value, value));
+  } catch (_) {}
+}
+let timer;
+f.section.addEventListener('change', () => { document.getElementById('subcategoryFilter').hidden = f.section.value !== 'accessories'; });
+for (const id of fields) f[id].addEventListener(f[id].tagName === 'INPUT' ? 'input' : 'change', () => { clearTimeout(timer); timer = setTimeout(load, 250); });
+loadBrands(); load();
 </script>
 </body>
 </html>

@@ -1,6 +1,12 @@
-﻿// Apna WhatsApp number 91 ke saath, bina + ya space (jaise 919876543210). Jab tak X hain, button nahi dikhega.
-const STORE = { whatsapp: '91XXXXXXXXXX' };
-
+﻿const STORE = {
+  whatsapp: '919356114946',
+  phone: '+919356114946',
+  phoneLabel: '+91 93561 14946',
+  hours: 'Open daily · 10:00 AM–10:00 PM',
+  areaShort: 'Sant Tukaram Nagar, Pimpri-Chinchwad',
+  addressFull: 'JRC9+J45, Yashwantrao Chavan Rd, Komal Gruh Rachana Society, Sant Tukaram Nagar, Pimpri Colony, Pimpri-Chinchwad, Maharashtra 411018',
+  mapsUrl: 'https://maps.app.goo.gl/LvvZbApBRxbzKYFV8?g_st=ic',
+};
 const rupee = (n) => '₹ ' + Number(n).toLocaleString('en-IN');
 const img = (url, w) => url.replace('/upload/', '/upload/f_auto,q_auto,w_' + w + '/');
 
@@ -30,11 +36,82 @@ async function api(path, opts) {
   return data;
 }
 
+// API kabhi array deta hai, kabhi { items: [...] } - dono chalenge
+const listOf = (d) => Array.isArray(d) ? d : ((d && d.items) || []);
+
+function productCard(p) {
+  const cover = p.images && p.images[0];
+  const sold = p.status === 'sold' || p.stock < 1;
+  const r = p.refurbished;
+  return h('a', { class: 'card', href: 'product.html?slug=' + encodeURIComponent(p.slug) },
+    h('div', { class: 'ph' }, cover ? h('img', { src: img(cover.url, 600), alt: cover.alt || p.name, loading: 'lazy' }) : 'Photo jald aayegi'),
+    h('div', { class: 'bd' },
+      h('div', {}, p.type === 'refurbished'
+        ? [r && r.grade ? h('span', { class: 'badge' }, 'Grade ' + r.grade) : h('span', { class: 'badge' }, 'Refurbished'), r && r.batteryHealth != null ? h('span', { class: 'badge soft' }, 'Battery ' + r.batteryHealth + '%') : null]
+        : h('span', { class: 'badge' }, 'New')),
+      p.section === 'accessories' && p.subcategory ? h('span', { class: 'muted' }, p.subcategory) : null,
+      h('b', {}, p.name),
+      h('span', { class: 'muted' }, [p.specs && p.specs.cpu, p.specs && p.specs.ram, p.specs && p.specs.storage].filter(Boolean).join(' · ') || p.subcategory || p.category || p.brand),
+      h('span', { class: 'price' }, sold ? 'Sold' : rupee(p.price))));
+}
+
+const ICON = {
+  pin: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.2 7-11a7 7 0 10-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>',
+  phone: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A15 15 0 013 6a2 2 0 012-2z"/></svg>',
+  clock: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  search: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>',
+  help: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 114 2c-.9.6-1.5 1-1.5 2M12 17h.01"/></svg>',
+  menu: '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
+  chev: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
+};
+
+// Ek hi navbar, har page pe. Yahan badlo = sab pages pe badal jayega.
 function renderChrome() {
+  const S = STORE;
+  const wa = /^\d{12}$/.test(S.whatsapp) ? 'https://wa.me/' + S.whatsapp + '?text=' + encodeURIComponent('Hi, mujhe help chahiye') : 'contact.html';
   document.getElementById('hdr').innerHTML =
-    '<div class="top">6 Months Warranty on every laptop · Online payment secured by Razorpay</div>' +
-    '<header class="site"><div class="wrap"><a class="brand" href="/"><img src="img/logo.png" alt="" onerror="this.remove()">VANSH COMPUTER</a>' +
-    '<nav class="main"><a href="shop.html?type=refurbished">Refurbished</a><a href="shop.html?type=new">New Laptops</a></nav></div></header>';
+    '<div class="top"><div class="wrap topin">' +
+      '<div class="tl">' +
+        '<a href="' + S.mapsUrl + '" target="_blank" rel="noopener">' + ICON.pin + '<span>' + S.areaShort + '</span></a>' +
+        '<a href="tel:' + S.phone + '">' + ICON.phone + '<span>' + S.phoneLabel + '</span></a>' +
+        '<span class="hrs">' + ICON.clock + '<span>' + S.hours + '</span></span>' +
+      '</div>' +
+      '<div class="tr">' +
+        '<a href="track-order.html">Track Order</a>' +
+        '<a href="' + S.mapsUrl + '" target="_blank" rel="noopener">Store Location</a>' +
+        '<a href="' + wa + '" target="_blank" rel="noopener" class="helpl">' + ICON.help + '<span>Help</span></a>' +
+      '</div>' +
+    '</div></div>' +
+    '<header class="site"><div class="wrap hd">' +
+      '<button class="burger" id="burger" aria-label="Menu" aria-expanded="false">' + ICON.menu + '</button>' +
+      '<a class="brand" href="/"><img src="img/logo.jpg" alt="Vansh Computer logo" onerror="this.remove()"><span>VANSH COMPUTER</span></a>' +
+      '<form class="hsearch" id="hsearch" role="search"><input type="search" id="hq" placeholder="Search brand, model, e.g. Dell Latitude" aria-label="Search laptops"><button type="submit" aria-label="Search">' + ICON.search + '</button></form>' +
+      '<nav class="main" id="mainnav" aria-label="Main">' +
+        '<a href="/">Home</a>' +
+        '<a href="shop.html">Shop</a>' +
+        '<a href="shop.html?section=accessories">Accessories</a>' +
+        '<div class="dd"><button type="button" class="ddb">Laptops ' + ICON.chev + '</button><div class="ddm">' +
+          '<a href="shop.html?type=refurbished">Refurbished Laptops</a><a href="shop.html?type=new">New Laptops</a>' +
+          '<a href="shop.html?type=refurbished&maxPrice=20000">Under ₹20,000</a><a href="shop.html?type=refurbished&maxPrice=30000">Under ₹30,000</a></div></div>' +
+        '<div class="dd"><button type="button" class="ddb">Services ' + ICON.chev + '</button><div class="ddm">' +
+          '<a href="services.html#laptop">Laptop Repair</a><a href="services.html#computer">Computer Repair</a><a href="services.html#macbook">MacBook Repair</a></div></div>' +
+        '<a href="contact.html">Contact</a>' +
+      '</nav>' +
+    '</div></header>';
+
+  const nav = document.getElementById('mainnav'), bg = document.getElementById('burger');
+  bg.addEventListener('click', () => { const o = nav.classList.toggle('open'); bg.setAttribute('aria-expanded', o); });
+  document.querySelectorAll('.ddb').forEach((b) => b.addEventListener('click', () => b.parentElement.classList.toggle('open')));
+  document.getElementById('hsearch').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const v = document.getElementById('hq').value.trim();
+    location.href = 'shop.html' + (v ? '?q=' + encodeURIComponent(v) : '');
+  });
+
   document.getElementById('ftr').innerHTML =
-    '<footer class="site"><div class="wrap">© 2026 Vansh Computer. All rights reserved.</div></footer>';
+    '<footer class="site"><div class="wrap fgrid">' +
+      '<div><b class="fb">VANSH COMPUTER</b><p>' + S.addressFull + '</p><p><a href="tel:' + S.phone + '">' + S.phoneLabel + '</a><br>' + S.hours + '</p></div>' +
+      '<div><b>Shop</b><a href="shop.html?type=refurbished">Refurbished Laptops</a><a href="shop.html?type=new">New Laptops</a></div>' +
+      '<div><b>Support</b><a href="track-order.html">Track Order</a><a href="contact.html">Contact / Help</a><a href="' + S.mapsUrl + '" target="_blank" rel="noopener">Store Location</a></div>' +
+    '</div><div class="wrap fcopy">© 2026 Vansh Computer. All rights reserved.</div></footer>';
 }

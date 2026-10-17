@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Homepage Banner | Vansh Computer Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/site.css">
+<style>
+body{background:#F5F7FB}.admin{max-width:1000px;margin:36px auto 64px;padding:0 18px}.panel{background:#fff;border:1px solid var(--line);border-radius:16px;padding:clamp(20px,4vw,36px);box-shadow:0 12px 32px rgba(15,23,42,.06)}
+.admin h1{margin:0 0 8px}.hint{color:var(--muted);line-height:1.6;margin:0 0 24px}.field{display:grid;gap:7px;margin:18px 0}.field label{font-weight:700;font-size:14px}.field input,.field textarea{width:100%;border:1px solid #d5dbe7;border-radius:10px;padding:12px;font:inherit}.field textarea{min-height:110px;resize:vertical}.field input[type=file]{background:#fff}.preview{overflow:hidden;border-radius:14px;min-height:240px;padding:30px;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(220px,.9fr);gap:24px;align-items:center;background:linear-gradient(115deg,#0F172A,#172554 60%,#2563EB);color:#fff;margin:22px 0}.preview.no-image{grid-template-columns:1fr}.preview-content{min-width:0}.preview small{color:#BFDBFE;font-weight:700;letter-spacing:1px}.preview h2{font-size:clamp(28px,5vw,44px);line-height:1.08;white-space:pre-line;margin:10px 0}.preview p{white-space:pre-line;color:#E2E8F0}.preview img{width:100%;max-height:280px;object-fit:contain;border-radius:12px}.preview img[hidden]{display:none}.actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.status{min-height:24px;color:#166534;font-weight:600}.status.error{color:#b91c1c}.topline{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:18px}.topline a{color:var(--accent);font-weight:700}#editor{display:none}
+@media(max-width:700px){.preview{grid-template-columns:1fr}.preview.no-image{grid-template-columns:1fr}.preview img{max-height:220px}}
+.product-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:0 18px}.product-form .wide{grid-column:1/-1}.admin-list{display:grid;gap:10px;margin-top:18px}.admin-product{display:flex;justify-content:space-between;gap:12px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:12px}.admin-product-actions{display:flex;gap:8px}.admin-product button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 12px;cursor:pointer}.section-links{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}.section-links a{background:#fff;border:1px solid var(--line);padding:9px 12px;border-radius:9px;font-weight:700;color:var(--accent)}
+.photo-picker{background:#F8FAFF;border:1px dashed #94A3B8;border-radius:12px;padding:16px}.photo-picker input{background:#fff}.photo-help{margin:8px 0 0;color:var(--muted);font-size:13px}.photo-thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.photo-thumbs img{width:76px;height:64px;object-fit:cover;border-radius:7px;border:1px solid var(--line)}
+</style>
+</head>
+<body>
+<main class="admin">
+  <div class="topline"><a href="/">← Back to website</a><button id="logout" class="btn line" type="button" hidden>Log out</button></div>
+  <section class="panel" id="loginPanel">
+    <h1>Admin login</h1><p class="hint">Login with the shop owner or manager account to edit the homepage banner.</p>
+    <form id="loginForm">
+      <div class="field"><label for="email">Email</label><input id="email" type="email" autocomplete="username" required></div>
+      <div class="field"><label for="password">Password</label><input id="password" type="password" autocomplete="current-password" required></div>
+      <button class="btn" type="submit">Log in</button><p class="status" id="loginStatus" role="status"></p>
+    </form>
+  </section>
+
+  <section class="panel" id="editor">
+    <div class="section-links"><a href="#editor">Homepage banner</a><a href="#shopBannerForm">Shop offer banner</a><a href="#productsPanel">Products</a></div>
+    <h1>Homepage banner</h1><p class="hint">Update the banner text and optional image. “Shop Now” and “Get a Callback” stay on the banner automatically.</p>
+    <form id="bannerForm">
+      <div class="field"><label for="kicker">Small heading</label><input id="kicker" maxlength="100" required></div>
+      <div class="field"><label for="title">Main heading</label><textarea id="title" maxlength="220" required></textarea></div>
+      <div class="field"><label for="description">Description</label><textarea id="description" maxlength="500" required></textarea></div>
+      <div class="field"><label for="image">Banner image (optional, JPG/PNG/WebP, max 5 MB)</label><input id="image" type="file" accept="image/jpeg,image/png,image/webp"><label style="font-weight:500"><input id="removeImage" type="checkbox"> Remove current image</label></div>
+      <div class="preview no-image" id="preview"><div class="preview-content"><small id="previewKicker"></small><h2 id="previewTitle"></h2><p id="previewDescription"></p><div class="actions"><span class="btn">Shop Now</span><span class="btn line">Get a Callback</span></div></div><img id="previewImage" alt="Banner image preview" hidden></div>
+      <div class="actions"><button class="btn" id="save" type="submit">Save banner</button><p class="status" id="saveStatus" role="status"></p></div>
+    </form>
+    <hr style="border:0;border-top:1px solid var(--line);margin:36px 0">
+    <h2>Shop offer banner</h2><p class="hint">Owner offers ke hisaab se yahan shop page ka banner update kar sakta hai.</p>
+    <form id="shopBannerForm">
+      <div class="field"><label for="shopKicker">Small heading</label><input id="shopKicker" maxlength="100" required></div>
+      <div class="field"><label for="shopTitle">Offer heading</label><textarea id="shopTitle" maxlength="220" required></textarea></div>
+      <div class="field"><label for="shopDescription">Offer details</label><textarea id="shopDescription" maxlength="500" required></textarea></div>
+      <div class="field"><label for="shopImage">Offer image (optional, JPG/PNG/WebP, max 5 MB)</label><input id="shopImage" type="file" accept="image/jpeg,image/png,image/webp"><label style="font-weight:500"><input id="removeShopImage" type="checkbox"> Remove current image</label></div>
+      <div class="preview no-image" id="shopPreview"><div class="preview-content"><small id="shopPreviewKicker"></small><h2 id="shopPreviewTitle"></h2><p id="shopPreviewDescription"></p></div><img id="shopPreviewImage" alt="Shop banner preview" hidden></div>
+      <div class="actions"><button class="btn" id="saveShopBanner" type="submit">Save shop banner</button><p class="status" id="shopBannerStatus" role="status"></p></div>
+    </form>
+  </section>
+  <section class="panel" id="productsPanel" style="display:none;margin-top:22px">
+    <div class="section-links"><a href="#editor">Banners</a><a href="#productsPanel">Products</a></div>
+    <h1>Products</h1><p class="hint">Product photo optional hai. Laptop ki detailed specs bharo; accessories ke liye unke lagu fields hi bharo. Homepage par dikhane ke liye checkbox select karo.</p>
+    <form id="productForm">
+      <div class="product-form">
+        <div class="field"><label for="pName">Product name / model *</label><input id="pName" required maxlength="200"></div>
+        <div class="field"><label for="pBrand">Brand *</label><input id="pBrand" required placeholder="Dell, HP, Logitech..." maxlength="100"></div>
+        <div class="field wide photo-picker"><label for="pPhotos">Product photos (select 5–8 together)</label><input id="pPhotos" type="file" accept="image/jpeg,image/png,image/webp" multiple><p class="photo-help" id="photoHelp">Choose at least 5 photos for a full product gallery; select them all at once. Photos are optional if you do not have them yet. JPG/PNG/WebP, max 5 MB each.</p><div class="photo-thumbs" id="photoThumbs"></div></div>
+        <div class="field"><label for="pSection">Show in section *</label><select id="pSection"><option value="laptop">Laptops</option><option value="accessories">Accessories</option></select></div>
+        <div class="field"><label for="pCategory">Product category</label><select id="pCategory"><option value="laptop">Laptop</option><option value="accessory">Accessory</option><option value="printer">Printer</option><option value="tablet">Tablet / iPad</option><option value="desktop">Desktop</option><option value="monitor">Monitor</option></select></div>
+        <div class="field"><label for="pSubcategory">Accessory type / subcategory</label><input id="pSubcategory" list="accessoryTypes" placeholder="Mouse, keyboard, charger..."><datalist id="accessoryTypes"><option value="mouse"><option value="keyboard"><option value="keypad"><option value="printer"><option value="charger"><option value="bag"><option value="mouse pad"><option value="laptop stand"><option value="headphones"><option value="bluetooth speaker"><option value="earbuds"><option value="tablet"><option value="webcam"><option value="cable"><option value="adapter"></datalist></div>
+        <div class="field"><label for="pType">Condition *</label><select id="pType"><option value="new">New</option><option value="refurbished">Refurbished</option></select></div>
+        <div class="field"><label for="pSku">SKU / stock code *</label><input id="pSku" required maxlength="100"></div>
+        <div class="field"><label for="pPrice">Price (₹) *</label><input id="pPrice" type="number" min="1" required></div>
+        <div class="field"><label for="pStock">Quantity in stock</label><input id="pStock" type="number" min="0" value="1"></div>
+        <div class="field"><label for="pWarranty">Warranty (months)</label><input id="pWarranty" type="number" min="0" value="6"></div>
+        <div class="field"><label for="pCpu">Processor / chipset</label><input id="pCpu" placeholder="Intel Core i5-1245U"></div>
+        <div class="field"><label for="pRam">RAM</label><input id="pRam" placeholder="16 GB DDR4"></div>
+        <div class="field"><label for="pStorage">Storage / capacity</label><input id="pStorage" placeholder="512 GB SSD"></div>
+        <div class="field"><label for="pGpu">Graphics / GPU</label><input id="pGpu" placeholder="Intel Iris Xe / RTX 3050"></div>
+        <div class="field"><label for="pScreen">Display / size</label><input id="pScreen" placeholder="14 inch FHD IPS"></div>
+        <div class="field"><label for="pOs">Operating system</label><input id="pOs" placeholder="Windows 11 Pro"></div>
+        <div class="field"><label for="pGrade">Refurbished grade</label><select id="pGrade"><option value="">Not applicable</option><option>A</option><option>B</option><option>C</option></select></div>
+        <div class="field"><label for="pBattery">Battery health (%)</label><input id="pBattery" type="number" min="0" max="100"></div>
+        <div class="field"><label for="pCosmetic">Cosmetic condition / notes</label><input id="pCosmetic" placeholder="Light scratches on lid"></div>
+        <div class="field"><label for="pIncluded">Included accessories (comma separated)</label><input id="pIncluded" placeholder="Charger, laptop bag"></div>
+        <div class="field"><label for="pChecklist">Inspection checks (comma separated)</label><input id="pChecklist" placeholder="Keyboard tested, ports tested"></div>
+        <div class="field wide"><label for="pDescription">Product details / condition / included items</label><textarea id="pDescription" maxlength="3000"></textarea></div>
+        <div class="field wide"><label style="font-weight:500"><input id="pHome" type="checkbox"> Show this product on homepage</label></div>
+      </div>
+      <div class="actions"><button class="btn" id="saveProduct" type="submit">Add new product</button><button class="btn line" id="cancelEdit" type="button" hidden>Cancel edit</button><p class="status" id="productStatus" role="status"></p></div>
+    </form>
+    <h2 style="margin-top:32px">Current products</h2><div class="admin-list" id="adminProducts"><p class="hint">Loading products...</p></div>
+  </section>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const listOf = (data) => Array.isArray(data) ? data : ((data && data.items) || []);
+let bannerImageUrl = '';
+let selectedImagePreviewUrl = '';
+let shopImageUrl = '';
+let selectedShopImagePreviewUrl = '';
+let editingProductId = '';
+let currentImageCount = 0;
+let productPhotoPreviews = [];
+const showError = (el, message) => { el.textContent = message; el.classList.add('error'); };
+const clearStatus = (el) => { el.textContent = ''; el.classList.remove('error'); };
+async function request(path, options) {
+  const response = await fetch(path, options);
+  let data = {};
+  try { data = await response.json(); } catch (_) {}
+  if (!response.ok) {
+    const duplicate = data.fields && Object.entries(data.fields).map(([field, value]) => `${field}: ${value}`).join(', ');
+    throw new Error(duplicate ? `${data.message || 'Duplicate value'} (${duplicate}). Is field ke liye alag value use karein.` : (data.message || 'Request failed'));
+  }
+  return data;
+}
+function setPreview(banner) {
+  bannerImageUrl = banner.imageUrl || '';
+  $('kicker').value = banner.kicker || '';
+  $('title').value = banner.title || '';
+  $('description').value = banner.description || '';
+  $('previewKicker').textContent = banner.kicker || '';
+  $('previewTitle').textContent = banner.title || '';
+  $('previewDescription').textContent = banner.description || '';
+  $('previewImage').src = banner.imageUrl || '';
+  $('previewImage').hidden = !banner.imageUrl;
+  $('preview').classList.toggle('no-image', !banner.imageUrl);
+  $('shopKicker').value = banner.shopKicker || 'SHOP OFFERS';
+  $('shopTitle').value = banner.shopTitle || 'Deals on laptops and accessories';
+  $('shopDescription').value = banner.shopDescription || '';
+  shopImageUrl = banner.shopImageUrl || '';
+  $('shopPreviewKicker').textContent = banner.shopKicker || '';
+  $('shopPreviewTitle').textContent = banner.shopTitle || '';
+  $('shopPreviewDescription').textContent = banner.shopDescription || '';
+  $('shopPreviewImage').src = shopImageUrl;
+  $('shopPreviewImage').hidden = !shopImageUrl;
+  $('shopPreview').classList.toggle('no-image', !shopImageUrl);
+  $('removeShopImage').checked = false;
+}
+function updatePreview() {
+  const imageUrl = selectedImagePreviewUrl || ($('removeImage').checked ? '' : bannerImageUrl);
+  $('previewKicker').textContent = $('kicker').value;
+  $('previewTitle').textContent = $('title').value;
+  $('previewDescription').textContent = $('description').value;
+  $('previewImage').src = imageUrl;
+  $('previewImage').hidden = !imageUrl;
+  $('preview').classList.toggle('no-image', !imageUrl);
+}
+async function loadBanner() { setPreview(await request('/api/banner')); }
+async function openEditor(user) {
+  if (!['owner', 'manager', 'inventory'].includes(user.role)) throw new Error('Products ke liye owner, manager, ya inventory account chahiye.');
+  $('loginPanel').style.display = 'none'; $('productsPanel').style.display = 'block'; $('logout').hidden = false;
+  if (['owner', 'manager'].includes(user.role)) {
+    $('editor').style.display = 'block';
+    await loadBanner();
+  } else $('editor').style.display = 'none';
+  await loadProducts();
+}
+$('loginForm').addEventListener('submit', async (event) => {
+  event.preventDefault(); const status = $('loginStatus'); clearStatus(status);
+  try {
+    const user = await request('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: $('email').value, password: $('password').value }) });
+    await openEditor(user);
+  } catch (error) { showError(status, error.message); }
+});
+$('bannerForm').addEventListener('input', updatePreview);
+$('image').addEventListener('change', () => {
+  if (selectedImagePreviewUrl) URL.revokeObjectURL(selectedImagePreviewUrl);
+  selectedImagePreviewUrl = $('image').files[0] ? URL.createObjectURL($('image').files[0]) : '';
+  updatePreview();
+});
+$('bannerForm').addEventListener('submit', async (event) => {
+  event.preventDefault(); const status = $('saveStatus'), button = $('save'); clearStatus(status); button.disabled = true;
+  const form = new FormData(); form.append('kicker', $('kicker').value); form.append('title', $('title').value); form.append('description', $('description').value); form.append('removeImage', $('removeImage').checked ? 'true' : 'false');
+  if ($('image').files[0]) form.append('image', $('image').files[0]);
+  try { const saved = await request('/api/banner', { method: 'PUT', body: form }); $('image').value = ''; $('removeImage').checked = false; if (selectedImagePreviewUrl) URL.revokeObjectURL(selectedImagePreviewUrl); selectedImagePreviewUrl = ''; setPreview(saved); status.textContent = 'Banner save ho gaya. Homepage refresh karke check karein.'; }
+  catch (error) { showError(status, error.message); }
+  finally { button.disabled = false; }
+});
+$('shopBannerForm').addEventListener('submit', async (event) => {
+  event.preventDefault(); const status = $('shopBannerStatus'), button = $('saveShopBanner'); clearStatus(status); button.disabled = true;
+  const form = new FormData();
+  form.append('kicker', $('kicker').value); form.append('title', $('title').value); form.append('description', $('description').value);
+  form.append('removeImage', $('removeImage').checked ? 'true' : 'false');
+  form.append('shopKicker', $('shopKicker').value); form.append('shopTitle', $('shopTitle').value); form.append('shopDescription', $('shopDescription').value);
+  form.append('removeShopImage', $('removeShopImage').checked ? 'true' : 'false');
+  if ($('shopImage').files[0]) form.append('shopImage', $('shopImage').files[0]);
+  try {
+    const saved = await request('/api/banner', { method: 'PUT', body: form });
+    $('shopImage').value = ''; if (selectedShopImagePreviewUrl) URL.revokeObjectURL(selectedShopImagePreviewUrl); selectedShopImagePreviewUrl = ''; setPreview(saved); status.textContent = 'Shop offer banner save ho gaya.';
+  } catch (error) { showError(status, error.message); }
+  finally { button.disabled = false; }
+});
+$('shopBannerForm').addEventListener('input', () => {
+  $('shopPreviewKicker').textContent = $('shopKicker').value;
+  $('shopPreviewTitle').textContent = $('shopTitle').value;
+  $('shopPreviewDescription').textContent = $('shopDescription').value;
+  const imageUrl = selectedShopImagePreviewUrl || ($('removeShopImage').checked ? '' : shopImageUrl);
+  $('shopPreviewImage').src = imageUrl; $('shopPreviewImage').hidden = !imageUrl;
+  $('shopPreview').classList.toggle('no-image', !imageUrl);
+});
+$('shopImage').addEventListener('change', () => {
+  if (selectedShopImagePreviewUrl) URL.revokeObjectURL(selectedShopImagePreviewUrl);
+  selectedShopImagePreviewUrl = $('shopImage').files[0] ? URL.createObjectURL($('shopImage').files[0]) : '';
+  $('shopPreviewImage').src = selectedShopImagePreviewUrl || shopImageUrl;
+  $('shopPreviewImage').hidden = !selectedShopImagePreviewUrl && (!$('shopImage').files[0] && !$('removeShopImage').checked && !shopImageUrl);
+  $('shopPreview').classList.toggle('no-image', $('shopPreviewImage').hidden);
+});
+
+function resetProductForm() {
+  productPhotoPreviews.forEach((url) => URL.revokeObjectURL(url)); productPhotoPreviews = []; currentImageCount = 0;
+  editingProductId = ''; $('productForm').reset(); $('pStock').value = '1'; $('pWarranty').value = '6';
+  $('saveProduct').textContent = 'Add new product'; $('cancelEdit').hidden = true;
+  $('photoHelp').textContent = 'Choose at least 5 photos for a full product gallery; select them all at once. Photos are optional if you do not have them yet. JPG/PNG/WebP, max 5 MB each.';
+  $('photoThumbs').replaceChildren();
+  $('productStatus').textContent = '';
+}
+function editProduct(product) {
+  editingProductId = product._id;
+  currentImageCount = (product.images || []).length;
+  $('photoHelp').textContent = `Already saved: ${currentImageCount} photo(s). Add photos to reach at least 5 total (maximum 8).`;
+  const values = {
+    pName: product.name, pBrand: product.brand, pSection: product.section || 'laptop', pCategory: product.category || 'laptop',
+    pSubcategory: product.subcategory || '', pType: product.type, pSku: product.sku, pPrice: product.price,
+    pStock: product.stock, pWarranty: product.warrantyMonths, pCpu: product.specs?.cpu || '', pRam: product.specs?.ram || '',
+    pStorage: product.specs?.storage || '', pGpu: product.specs?.gpu || '', pScreen: product.specs?.screen || '', pOs: product.specs?.os || '',
+    pGrade: product.refurbished?.grade || '', pBattery: product.refurbished?.batteryHealth ?? '', pCosmetic: product.refurbished?.cosmeticNotes || '',
+    pIncluded: (product.refurbished?.includedAccessories || []).join(', '), pChecklist: (product.refurbished?.inspectionChecklist || []).join(', '), pDescription: product.description || '',
+  };
+  for (const [id, value] of Object.entries(values)) $(id).value = value;
+  $('pHome').checked = !!product.featuredOnHome; $('pPhotos').value = '';
+  $('photoThumbs').replaceChildren(...(product.images || []).slice(0, 8).map((image) => {
+    const thumb = document.createElement('img'); thumb.src = image.url; thumb.alt = image.alt || product.name; return thumb;
+  }));
+  $('saveProduct').textContent = 'Save product changes'; $('cancelEdit').hidden = false;
+  $('productForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+async function loadProducts() {
+  const container = $('adminProducts');
+  try {
+    const items = listOf(await request('/api/products?status=active'));
+    if (!items.length) { container.replaceChildren(Object.assign(document.createElement('p'), { className: 'hint', textContent: 'Abhi koi active product nahi hai.' })); return; }
+    container.replaceChildren(...items.map((product) => {
+      const row = document.createElement('div'); row.className = 'admin-product';
+      const info = document.createElement('span'); info.textContent = `${product.name} · ${product.brand} · ₹${Number(product.price).toLocaleString('en-IN')} · ${product.section === 'accessories' ? 'Accessories' : 'Laptops'}`;
+      const actions = document.createElement('div'); actions.className = 'admin-product-actions';
+      const edit = document.createElement('button'); edit.type = 'button'; edit.textContent = 'Edit'; edit.addEventListener('click', () => editProduct(product));
+      const archive = document.createElement('button'); archive.type = 'button'; archive.textContent = 'Archive'; archive.addEventListener('click', async () => {
+        if (!confirm(`Archive ${product.name}?`)) return;
+        try { await request('/api/products/' + encodeURIComponent(product._id), { method: 'DELETE' }); await loadProducts(); }
+        catch (error) { alert(error.message); }
+      });
+      actions.append(edit, archive); row.append(info, actions); return row;
+    }));
+  } catch (error) { container.textContent = error.message; }
+}
+$('cancelEdit').addEventListener('click', resetProductForm);
+$('pPhotos').addEventListener('change', () => {
+  productPhotoPreviews.forEach((url) => URL.revokeObjectURL(url));
+  productPhotoPreviews = [...$('pPhotos').files].map((file) => URL.createObjectURL(file));
+  const selected = $('pPhotos').files.length;
+  $('photoHelp').textContent = `${currentImageCount} saved + ${selected} selected = ${currentImageCount + selected} photo(s). Add at least 5 total, up to 8.`;
+  $('photoThumbs').replaceChildren(...productPhotoPreviews.map((url, index) => {
+    const thumb = document.createElement('img'); thumb.src = url; thumb.alt = `Selected product photo ${index + 1}`; return thumb;
+  }));
+});
+$('pSection').addEventListener('change', () => {
+  if ($('pSection').value === 'accessories' && $('pCategory').value === 'laptop') $('pCategory').value = 'accessory';
+  if ($('pSection').value === 'laptop' && $('pCategory').value === 'accessory') $('pCategory').value = 'laptop';
+});
+$('pCategory').addEventListener('change', () => {
+  if ($('pCategory').value === 'laptop') $('pSection').value = 'laptop';
+  else if ($('pSection').value === 'laptop') $('pSection').value = 'accessories';
+});
+$('productForm').addEventListener('submit', async (event) => {
+  event.preventDefault(); const status = $('productStatus'), button = $('saveProduct'); clearStatus(status); button.disabled = true;
+  const selectedPhotos = $('pPhotos').files;
+  if (currentImageCount + selectedPhotos.length > 8 || [...selectedPhotos].some((file) => file.size > 5 * 1024 * 1024)) {
+    showError(status, 'Product par maximum 8 photos ho sakti hain; har nayi photo 5 MB se chhoti honi chahiye.'); button.disabled = false; return;
+  }
+  if (selectedPhotos.length && currentImageCount + selectedPhotos.length < 5) {
+    showError(status, 'Full gallery ke liye kam se kam 5 total photos chahiye. Ek saath aur photos select karein.'); button.disabled = false; return;
+  }
+  const grade = $('pGrade').value, battery = $('pBattery').value;
+  const payload = {
+    name: $('pName').value.trim(), brand: $('pBrand').value.trim(), section: $('pSection').value, category: $('pCategory').value,
+    subcategory: $('pSubcategory').value.trim().toLowerCase(), type: $('pType').value, sku: $('pSku').value.trim(),
+    price: Number($('pPrice').value), stock: Number($('pStock').value || 0), warrantyMonths: Number($('pWarranty').value || 0),
+    storageGb: (() => { const match = $('pStorage').value.match(/([\d.]+)\s*(tb|gb)/i); return match ? Math.round(Number(match[1]) * (/tb/i.test(match[2]) ? 1024 : 1)) : null; })(),
+    specs: { cpu: $('pCpu').value.trim(), ram: $('pRam').value.trim(), storage: $('pStorage').value.trim(), gpu: $('pGpu').value.trim(), screen: $('pScreen').value.trim(), os: $('pOs').value.trim() },
+    description: $('pDescription').value.trim(), featuredOnHome: $('pHome').checked,
+    refurbished: {
+      ...(grade ? { grade } : {}), ...(battery !== '' ? { batteryHealth: Number(battery) } : {}),
+      cosmeticNotes: $('pCosmetic').value.trim(),
+      includedAccessories: $('pIncluded').value.split(',').map((item) => item.trim()).filter(Boolean),
+      inspectionChecklist: $('pChecklist').value.split(',').map((item) => item.trim()).filter(Boolean),
+    },
+  };
+  let productSaved = false;
+  try {
+    const product = editingProductId
+      ? await request('/api/products/' + encodeURIComponent(editingProductId), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+      : await request('/api/products', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    productSaved = true;
+    editingProductId = product._id; $('saveProduct').textContent = 'Save product changes'; $('cancelEdit').hidden = false;
+    const files = $('pPhotos').files;
+    if (files.length) {
+      const upload = new FormData(); for (const file of files) upload.append('images', file);
+      const savedPhotos = await request('/api/products/' + encodeURIComponent(product._id) + '/images', { method: 'POST', body: upload });
+      currentImageCount = savedPhotos.length;
+    }
+    status.textContent = 'Product save ho gaya.'; resetProductForm(); await loadProducts();
+  } catch (error) { showError(status, productSaved ? `Product details saved, but photo upload failed: ${error.message}. You can retry the photo upload.` : error.message); await loadProducts(); }
+  finally { button.disabled = false; }
+});
+$('logout').addEventListener('click', async () => { await request('/api/auth/logout', { method: 'POST' }); location.reload(); });
+(async () => { try { await openEditor(await request('/api/auth/me')); } catch (_) { /* login form stays visible */ } })();
+</script>
+</body>
+</html>
