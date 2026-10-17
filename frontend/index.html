@@ -31,9 +31,14 @@
 .chips{display:flex;flex-wrap:wrap;gap:12px}
 .chip{display:inline-flex;align-items:center;min-height:44px;padding:0 18px;border:1px solid #d5dbe7;border-radius:99px;font-weight:600;font-size:14px}
 .chip:hover{border-color:var(--accent);color:var(--accent)}
-.brands{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
-.brands a{background:var(--bg);border-radius:14px;padding:22px;text-align:center;font-weight:800;font-size:20px}
-.brands a:hover{color:var(--accent)}
+.brands{display:grid;gap:14px;grid-template-columns:repeat(6,minmax(0,1fr))}
+.brands a{min-height:126px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px 12px;border:1px solid var(--line);border-radius:16px;background:#fff;box-shadow:0 2px 8px rgba(15,23,42,.035);transition:transform .18s,border-color .18s,box-shadow .18s}
+.brands a:hover{color:var(--accent);border-color:#cbdaf8;box-shadow:0 8px 22px rgba(37,99,235,.09);transform:translateY(-2px)}
+.brand-logo{display:flex;align-items:center;justify-content:center;width:100%;height:54px;color:var(--ink)}
+.brand-logo svg{display:block;max-width:100%;height:48px}
+.brands a>span:last-child{font-size:13px;font-weight:700;line-height:1.2;color:var(--muted)}
+@media(max-width:760px){.brands{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:420px){.brands{gap:10px}.brands a{min-height:112px;padding:12px 8px}.brand-logo svg{height:40px}}
 .cb{background:var(--bg);border-radius:16px;padding:clamp(20px,4vw,36px);display:grid;gap:24px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));align-items:center;margin-top:40px}
 .cb form{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:10px}
 .store{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
@@ -63,7 +68,17 @@ Honest grades.
     <div><svg class="trust-icon" viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M10 24v-3a14 14 0 0 1 28 0v3" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><rect x="7" y="22" width="7" height="12" rx="3" fill="#EAF1FF" stroke="currentColor" stroke-width="2"/><rect x="34" y="22" width="7" height="12" rx="3" fill="#EAF1FF" stroke="currentColor" stroke-width="2"/><path d="M37 34c0 4-3 6-8 6h-3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="20" y="37" width="8" height="4" rx="2" fill="currentColor"/><circle cx="24" cy="19" r="5" fill="#EAF1FF" stroke="currentColor" stroke-width="1.8"/><path d="M15.5 33c.7-4 3.8-6 8.5-6s7.8 2 8.5 6" fill="#EAF1FF" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><b>Real person se baat</b><span class="muted">Khareedne se pehle call ya WhatsApp karo.</span></div>
   </div>
 
-  <h3 class="sech" style="margin-top:8px">Shop by category</h3>
+  <h3 class="sech" style="margin-top:8px">Shop by brand</h3>
+  <div class="brands">
+    <a href="shop.html?brand=Dell" aria-label="Shop Dell laptops"><span class="brand-logo"><svg viewBox="0 0 120 48" role="img" aria-label="Dell"><circle cx="60" cy="24" r="21" fill="none" stroke="#007DB8" stroke-width="3"/><text x="60" y="30" text-anchor="middle" fill="#007DB8" font-family="Arial,sans-serif" font-size="20" font-weight="700">DELL</text></svg></span><span>Dell</span></a>
+    <a href="shop.html?brand=HP" aria-label="Shop HP laptops"><span class="brand-logo"><svg viewBox="0 0 120 48" role="img" aria-label="HP"><circle cx="60" cy="24" r="21" fill="#0096D6"/><text x="60" y="32" text-anchor="middle" fill="#fff" font-family="Arial,sans-serif" font-size="25" font-style="italic" font-weight="700">hp</text></svg></span><span>HP</span></a>
+    <a href="shop.html?brand=Lenovo" aria-label="Shop Lenovo laptops"><span class="brand-logo"><svg viewBox="0 0 120 48" role="img" aria-label="Lenovo"><rect x="17" y="7" width="86" height="34" rx="5" fill="#E2231A"/><text x="60" y="31" text-anchor="middle" fill="#fff" font-family="Arial,sans-serif" font-size="23" font-weight="700">Lenovo</text></svg></span><span>Lenovo</span></a>
+    <a href="shop.html?brand=Apple" aria-label="Shop Apple laptops"><span class="brand-logo"><svg viewBox="0 0 120 48" role="img" aria-label="Apple"><path d="M64 12c3-4 2-8 2-8s-5 1-7 5c-2 3-2 6-2 6s4 1 7-3Zm11 18c-1 3-4 9-8 9-3 0-4-2-8-2s-5 2-8 2c-4 0-8-7-10-12-3-8 1-14 6-14 3 0 5 2 8 2 2 0 5-2 8-2 3 0 6 1 8 4-7 4-6 11 4 13Z" fill="#1D1D1F"/><text x="78" y="31" fill="#1D1D1F" font-family="Arial,sans-serif" font-size="19" font-weight="600">Apple</text></svg></span><span>Apple</span></a>
+    <a href="shop.html?brand=Acer" aria-label="Shop Acer laptops"><span class="brand-logo"><svg viewBox="0 0 120 48" role="img" aria-label="Acer"><text x="60" y="33" text-anchor="middle" fill="#80BC00" font-family="Arial,sans-serif" font-size="31" font-style="italic" font-weight="700" letter-spacing="-2">acer</text></svg></span><span>Acer</span></a>
+    <a href="shop.html?brand=ASUS" aria-label="Shop ASUS laptops"><span class="brand-logo"><svg viewBox="0 0 120 48" role="img" aria-label="ASUS"><path d="m19 17 15-10h63v6H37L26 20h70v6H19l-7-5 7-4Zm2 10h75v6H21z" fill="#0066B3"/><text x="60" y="39" text-anchor="middle" fill="#0066B3" font-family="Arial,sans-serif" font-size="12" font-weight="700" letter-spacing="3">ASUS</text></svg></span><span>ASUS</span></a>
+  </div>
+
+  <h3 class="sech">Shop by category</h3>
   <div class="chips" style="margin-bottom:14px"><a class="chip" href="shop.html">Browse all products</a><a class="chip" href="shop.html?section=laptop">Laptops</a><a class="chip" href="shop.html?section=accessories">Accessories</a></div>
   <div class="tiles">
     <a class="tile red" href="shop.html?type=refurbished"><b style="font-size:20px">Refurbished Laptops</b><small>Hamari best deals</small></a>
@@ -86,12 +101,6 @@ Honest grades.
     <a class="chip" href="shop.html?type=refurbished&maxPrice=30000">Under ₹30,000</a>
     <a class="chip" href="shop.html?type=refurbished&maxPrice=40000">Under ₹40,000</a>
     <a class="chip" href="shop.html?type=refurbished">Sab refurbished</a>
-  </div>
-
-  <h3 class="sech">Shop by brand</h3>
-  <div class="brands">
-    <a href="shop.html?brand=Dell">Dell</a><a href="shop.html?brand=HP">HP</a><a href="shop.html?brand=Lenovo">Lenovo</a>
-    <a href="shop.html?brand=Apple">Apple</a><a href="shop.html?brand=Acer">Acer</a><a href="shop.html?brand=ASUS">ASUS</a>
   </div>
 
   <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px">
