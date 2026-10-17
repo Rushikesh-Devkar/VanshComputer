@@ -110,8 +110,10 @@ function renderChrome() {
 
   document.getElementById('ftr').innerHTML =
     '<footer class="site"><div class="wrap fgrid">' +
-      '<div><b class="fb">VANSH COMPUTER</b><p>' + S.addressFull + '</p><p><a href="tel:' + S.phone + '">' + S.phoneLabel + '</a><br>' + S.hours + '</p></div>' +
-      '<div><b>Shop</b><a href="shop.html?type=refurbished">Refurbished Laptops</a><a href="shop.html?type=new">New Laptops</a></div>' +
-      '<div><b>Support</b><a href="track-order.html">Track Order</a><a href="contact.html">Contact / Help</a><a href="' + S.mapsUrl + '" target="_blank" rel="noopener">Store Location</a></div>' +
+      '<div class="footer-watermark" aria-hidden="true"><svg viewBox="0 0 240 150" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="48" y="18" width="144" height="96" rx="9" stroke="currentColor" stroke-width="7"/><path d="M27 127h186l-12 12H40l-13-12Z" stroke="currentColor" stroke-width="7" stroke-linejoin="round"/><path d="M103 127h34" stroke="currentColor" stroke-width="6" stroke-linecap="round"/></svg></div>' +
+      '<div><div class="footer-brand-header"><img src="img/logo.jpg" alt=""><b class="fb">VANSH COMPUTER</b></div><p>Certified refurbished and new laptops, with direct help from our team.</p><a class="footer-contact" href="tel:' + S.phone + '">' + ICON.phone + '<span>' + S.phoneLabel + '</span></a></div>' +
+      '<div><b>Shop by need</b><a href="shop.html?type=refurbished">Refurbished Laptops</a><a href="shop.html?type=new">New Laptops</a><a href="shop.html?q=gaming">Gaming laptops</a><a href="shop.html?q=business">Business laptops</a><a href="shop.html?section=accessories">Accessories</a></div>' +
+      '<div><b>Repair &amp; support</b><a href="/#repair-support">Repair services</a><a class="footer-contact" href="https://wa.me/' + S.whatsapp + '?text=' + encodeURIComponent('Hi, mujhe repair ya support chahiye') + '" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11.5a8 8 0 0 1-11.8 7L4 20l1.5-4.1A8 8 0 1 1 20 11.5Z"/><path d="M9 9c.6 2 2 3.4 4 4l1-1 2 1c-.2 1.4-1.2 2-2.4 1.8-3.3-.6-5.8-3.2-6.2-6.2C7.2 7.4 8 6.5 9.4 6.5L10.5 8 9 9Z"/></svg><span>WhatsApp support</span></a><a class="footer-contact" href="tel:' + S.phone + '">Call our team</a></div>' +
+      '<div><b>Visit our store</b><p>' + S.addressFull + '</p><p>' + S.hours + '</p><a href="' + S.mapsUrl + '" target="_blank" rel="noopener">Get directions ↗</a></div>' +
     '</div><div class="wrap fcopy">© 2026 Vansh Computer. All rights reserved.</div></footer>';
 }
