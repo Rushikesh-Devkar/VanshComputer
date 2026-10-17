@@ -23,14 +23,27 @@
 .trust b{display:block;margin-bottom:5px;font-size:15px;line-height:1.4}
 .trust .muted{display:block;font-size:13px;line-height:1.55}
 @media(max-width:520px){.trust{grid-template-columns:1fr;gap:12px;margin:24px 0}.trust>div{padding:16px}.trust-icon{margin-bottom:10px}}
-.sech{font-size:clamp(22px,3vw,28px);font-weight:800;margin:40px 0 16px}
+.sech{position:relative;display:flex;align-items:center;gap:14px;color:var(--ink);font-size:clamp(26px,3.4vw,34px);font-weight:800;letter-spacing:-.035em;margin:56px 0 24px;line-height:1.2}
+.sech::before{content:"";flex:none;width:4px;height:28px;border-radius:99px;background:var(--accent)}
+.sech::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,rgba(15,23,42,.14),transparent)}
 .tiles{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
 .tile{border-radius:16px;padding:28px 24px;min-height:120px;display:flex;flex-direction:column;justify-content:flex-end;background:var(--bg)}
 .tile.red{background:var(--accent);color:#fff}.tile.dark{background:#1E293B;color:#fff}
 .tile small{opacity:.85;font-size:14px}
-.chips{display:flex;flex-wrap:wrap;gap:12px}
+.chips{display:flex;flex-wrap:wrap;gap:12px;overflow:visible}
 .chip{display:inline-flex;align-items:center;min-height:44px;padding:0 18px;border:1px solid #d5dbe7;border-radius:99px;font-weight:600;font-size:14px}
 .chip:hover{border-color:var(--accent);color:var(--accent)}
+.catalog-nav{display:flex;flex-wrap:wrap;gap:10px 12px;margin-bottom:16px;overflow:visible}
+.catalog-menu{position:relative}
+.catalog-menu summary{list-style:none;cursor:pointer}
+.catalog-menu summary::-webkit-details-marker{display:none}
+.catalog-menu summary::after{content:"";width:7px;height:7px;margin:0 0 3px 10px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg);transition:transform .15s}
+.catalog-menu[open] summary::after{transform:rotate(225deg);margin-bottom:0}
+.catalog-menu summary:focus-visible{outline:3px solid var(--accent-soft);outline-offset:2px}
+.dropdown-menu{position:absolute;top:calc(100% + 8px);left:0;z-index:30;display:flex;flex-direction:column;min-width:220px;padding:6px;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 28px rgba(15,23,42,.14)}
+.dropdown-item{display:block;padding:10px 12px;border-radius:8px;color:var(--ink);font-size:14px;line-height:1.35;white-space:nowrap}
+.dropdown-item:hover,.dropdown-item:focus-visible{background:var(--accent-soft);color:var(--accent)}
+@media(max-width:520px){.catalog-nav{gap:8px}.dropdown-menu{min-width:200px}}
 .brands{display:grid;gap:14px;grid-template-columns:repeat(6,minmax(0,1fr))}
 .brands a{min-height:126px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px 12px;border:1px solid var(--line);border-radius:16px;background:#fff;box-shadow:0 2px 8px rgba(15,23,42,.035);transition:transform .18s,border-color .18s,box-shadow .18s}
 .brands a:hover{color:var(--accent);border-color:#cbdaf8;box-shadow:0 8px 22px rgba(37,99,235,.09);transform:translateY(-2px)}
@@ -43,6 +56,9 @@
 .cb form{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:10px}
 .store{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
 .store>div{border:1px solid var(--line);border-radius:14px;padding:18px;line-height:1.8}
+.stories{margin:52px auto 0}.stories[hidden]{display:none}.story-subhead{margin:24px 0 14px;font-size:18px;font-weight:800}.reels-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;width:100%;max-width:1200px;margin:0 auto}.reel-card{width:100%;min-width:0;height:auto;overflow:hidden;border:1px solid var(--line);border-radius:14px;background:#fff;box-shadow:0 4px 18px rgba(15,23,42,.06)}.reel-card video{display:block;width:100%;height:auto;max-height:400px;aspect-ratio:9/16;object-fit:cover;background:#0f172a}.reel-card>a{display:block;padding:12px;color:var(--accent);font-size:13px;font-weight:700}.reel-card p{margin:10px 12px 0;font-size:13px;line-height:1.5}.stories-reviews{columns:3 260px;column-gap:16px}.story-review{break-inside:avoid;margin:0 0 16px;padding:18px;border:1px solid var(--line);border-radius:14px;background:#fff}.story-review p{margin:10px 0;line-height:1.6;white-space:pre-line}.story-review img{width:72px;height:72px;object-fit:cover;border-radius:8px;margin:6px 6px 0 0}.story-stars{color:#E99A13;letter-spacing:2px}
+@media(max-width:900px){.reels-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:600px){.stories{margin-top:36px}.reels-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.reel-card video{max-height:340px}}
 </style>
 </head>
 <body>
@@ -79,28 +95,33 @@ Honest grades.
   </div>
 
   <h3 class="sech">Shop by category</h3>
-  <div class="chips" style="margin-bottom:14px"><a class="chip" href="shop.html">Browse all products</a><a class="chip" href="shop.html?section=laptop">Laptops</a><a class="chip" href="shop.html?section=accessories">Accessories</a></div>
+  <nav class="catalog-nav" aria-label="Shop by category">
+    <a class="chip" href="shop.html">Browse all products</a>
+    <a class="chip" href="shop.html?section=laptop">Laptops</a>
+    <details class="catalog-menu">
+      <summary class="chip">Accessories</summary>
+      <div class="dropdown-menu">
+        <a class="dropdown-item" href="shop.html?section=accessories">All accessories</a>
+        <a class="dropdown-item" href="shop.html?section=accessories&amp;subcategory=mouse">Mouse</a>
+        <a class="dropdown-item" href="shop.html?section=accessories&amp;subcategory=keyboard">Keyboard</a>
+        <a class="dropdown-item" href="shop.html?section=accessories&amp;subcategory=charger">Chargers</a>
+        <a class="dropdown-item" href="shop.html?section=accessories&amp;subcategory=printer">Printers</a>
+        <a class="dropdown-item" href="shop.html?section=accessories&amp;subcategory=tablet">Tablet / iPad</a>
+      </div>
+    </details>
+    <details class="catalog-menu">
+      <summary class="chip">Shop by budget</summary>
+      <div class="dropdown-menu">
+        <a class="dropdown-item" href="shop.html?type=refurbished&amp;maxPrice=20000">Under ₹20,000</a>
+        <a class="dropdown-item" href="shop.html?type=refurbished&amp;maxPrice=30000">Under ₹30,000</a>
+        <a class="dropdown-item" href="shop.html?type=refurbished&amp;maxPrice=40000">Under ₹40,000</a>
+        <a class="dropdown-item" href="shop.html?type=refurbished">Sab refurbished</a>
+      </div>
+    </details>
+  </nav>
   <div class="tiles">
     <a class="tile red" href="shop.html?type=refurbished"><b style="font-size:20px">Refurbished Laptops</b><small>Hamari best deals</small></a>
     <a class="tile dark" href="shop.html?type=new"><b style="font-size:20px">New Laptops</b><small>Sealed, brand warranty</small></a>
-  </div>
-
-  <h3 class="sech">Accessories</h3>
-  <div class="chips">
-    <a class="chip" href="shop.html?section=accessories">All accessories</a>
-    <a class="chip" href="shop.html?section=accessories&subcategory=mouse">Mouse</a>
-    <a class="chip" href="shop.html?section=accessories&subcategory=keyboard">Keyboard</a>
-    <a class="chip" href="shop.html?section=accessories&subcategory=charger">Chargers</a>
-    <a class="chip" href="shop.html?section=accessories&subcategory=printer">Printers</a>
-    <a class="chip" href="shop.html?section=accessories&subcategory=tablet">Tablet / iPad</a>
-  </div>
-
-  <h3 class="sech">Shop by budget</h3>
-  <div class="chips">
-    <a class="chip" href="shop.html?type=refurbished&maxPrice=20000">Under ₹20,000</a>
-    <a class="chip" href="shop.html?type=refurbished&maxPrice=30000">Under ₹30,000</a>
-    <a class="chip" href="shop.html?type=refurbished&maxPrice=40000">Under ₹40,000</a>
-    <a class="chip" href="shop.html?type=refurbished">Sab refurbished</a>
   </div>
 
   <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px">
@@ -123,6 +144,12 @@ Honest grades.
     </form>
   </section>
 
+  <section class="stories" id="stories" hidden>
+    <h3 class="sech">Customer Stories &amp; Reviews</h3>
+    <div id="storiesReelsSection" hidden><h4 class="story-subhead">From Instagram</h4><div class="reels-grid" id="storiesReels"></div></div>
+    <div id="storiesReviewsSection" hidden><h4 class="story-subhead">What customers say</h4><div class="stories-reviews" id="storiesReviews"></div></div>
+  </section>
+
   <h3 class="sech">Visit our store</h3>
   <div class="store">
     <div><b style="font-size:18px">Vansh Computer</b><br>Yashwantrao Chavan Rd, Komal Gruh Rachana Society,<br>Sant Tukaram Nagar, Pimpri Colony,<br>Pimpri-Chinchwad, Maharashtra 411018</div>
@@ -137,6 +164,21 @@ Honest grades.
 <script>
 renderChrome();
 document.getElementById('dirBtn').href = STORE.mapsUrl;
+loadCustomerStories();
+
+const catalogMenus = [...document.querySelectorAll('.catalog-menu')];
+catalogMenus.forEach((menu) => menu.addEventListener('toggle', () => {
+  if (menu.open) catalogMenus.forEach((other) => { if (other !== menu) other.open = false; });
+}));
+document.addEventListener('click', (event) => {
+  const target = event.target instanceof Element ? event.target : null;
+  if (!target?.closest('.catalog-menu') || target.closest('.dropdown-item')) {
+    catalogMenus.forEach((menu) => { menu.open = false; });
+  }
+});
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') catalogMenus.forEach((menu) => { menu.open = false; });
+});
 
 (async () => {
   try {
@@ -176,6 +218,37 @@ document.getElementById('cbForm').addEventListener('submit', async (ev) => {
     msg.textContent = e.data && e.data.errors ? e.data.errors.map((x) => x.message).join(', ') : e.message;
   } finally { btn.disabled = false; }
 });
+
+function storyReviewCard(review) {
+  const product = review.product;
+  return h('article', { class: 'story-review' },
+    h('div', { class: 'story-stars', 'aria-label': `${review.rating} out of 5 stars` }, '★'.repeat(review.rating) + '☆'.repeat(5 - review.rating)),
+    h('b', {}, review.customerName),
+    h('p', {}, review.text),
+    (review.images || []).map((image) => h('img', { src: image.url, alt: 'Customer review photo', loading: 'lazy' })),
+    product && product.slug ? h('a', { href: 'product.html?slug=' + encodeURIComponent(product.slug), style: 'display:block;margin-top:10px;color:var(--accent);font-size:13px;font-weight:700' }, 'Review for ' + product.name) : null);
+}
+async function loadCustomerStories() {
+  const [reels, reviews] = await Promise.allSettled([api('/api/reels'), api('/api/reviews?limit=9')]);
+  const reelItems = reels.status === 'fulfilled' ? listOf(reels.value) : [];
+  const reviewItems = reviews.status === 'fulfilled' ? listOf(reviews.value) : [];
+  if (!reelItems.length && !reviewItems.length) return;
+  document.getElementById('stories').hidden = false;
+  if (reelItems.length) {
+    document.getElementById('storiesReelsSection').hidden = false;
+    document.getElementById('storiesReels').replaceChildren(...reelItems.map((reel) => {
+      const video = h('video', { src: reel.videoUrl, muted: true, loop: true, playsinline: true, controls: true, preload: 'none', 'aria-label': reel.caption || 'Customer story video' });
+      video.addEventListener('mouseenter', () => video.play().catch(() => {}));
+      video.addEventListener('mouseleave', () => video.pause());
+      return h('article', { class: 'reel-card' }, video, reel.caption ? h('p', {}, reel.caption) : null,
+        h('a', { href: reel.instagramUrl, target: '_blank', rel: 'noopener noreferrer' }, 'View on Instagram ↗'));
+    }));
+  }
+  if (reviewItems.length) {
+    document.getElementById('storiesReviewsSection').hidden = false;
+    document.getElementById('storiesReviews').replaceChildren(...reviewItems.map(storyReviewCard));
+  }
+}
 </script>
 </body>
 </html>

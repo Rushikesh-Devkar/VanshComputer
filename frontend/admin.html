@@ -12,6 +12,8 @@ body{background:#F5F7FB}.admin{max-width:1000px;margin:36px auto 64px;padding:0 
 @media(max-width:700px){.preview{grid-template-columns:1fr}.preview.no-image{grid-template-columns:1fr}.preview img{max-height:220px}}
 .product-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:0 18px}.product-form .wide{grid-column:1/-1}.admin-list{display:grid;gap:10px;margin-top:18px}.admin-product{display:flex;justify-content:space-between;gap:12px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:12px}.admin-product-actions{display:flex;gap:8px}.admin-product button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 12px;cursor:pointer}.section-links{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}.section-links a{background:#fff;border:1px solid var(--line);padding:9px 12px;border-radius:9px;font-weight:700;color:var(--accent)}
 .photo-picker{background:#F8FAFF;border:1px dashed #94A3B8;border-radius:12px;padding:16px}.photo-picker input{background:#fff}.photo-help{margin:8px 0 0;color:var(--muted);font-size:13px}.photo-thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.photo-thumbs img{width:76px;height:64px;object-fit:cover;border-radius:7px;border:1px solid var(--line)}
+.social-list{display:grid;gap:10px;margin:16px 0}.social-row{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:14px;border:1px solid var(--line);border-radius:12px}.social-row p{margin:5px 0;color:var(--muted);font-size:14px;line-height:1.5}.social-row video{width:72px;max-height:128px;object-fit:cover;border-radius:8px;background:#111}.social-actions{display:flex;gap:8px;flex-wrap:wrap}.social-actions button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 11px;font:inherit;font-weight:700;cursor:pointer}.social-actions button:hover{border-color:var(--accent);color:var(--accent)}.admin .field input[type=file]{padding:10px}
+@media(max-width:600px){.social-row{align-items:flex-start;flex-direction:column}.social-row video{width:100%;max-width:160px}}
 </style>
 </head>
 <body>
@@ -27,7 +29,7 @@ body{background:#F5F7FB}.admin{max-width:1000px;margin:36px auto 64px;padding:0 
   </section>
 
   <section class="panel" id="editor">
-    <div class="section-links"><a href="#editor">Homepage banner</a><a href="#shopBannerForm">Shop offer banner</a><a href="#productsPanel">Products</a></div>
+    <div class="section-links"><a href="#editor">Homepage banner</a><a href="#shopBannerForm">Shop offer banner</a><a href="#socialContent">Reviews &amp; Reels</a><a href="#productsPanel">Products</a></div>
     <h1>Homepage banner</h1><p class="hint">Update the banner text and optional image. “Shop Now” and “Get a Callback” stay on the banner automatically.</p>
     <form id="bannerForm">
       <div class="field"><label for="kicker">Small heading</label><input id="kicker" maxlength="100" required></div>
@@ -47,6 +49,18 @@ body{background:#F5F7FB}.admin{max-width:1000px;margin:36px auto 64px;padding:0 
       <div class="preview no-image" id="shopPreview"><div class="preview-content"><small id="shopPreviewKicker"></small><h2 id="shopPreviewTitle"></h2><p id="shopPreviewDescription"></p></div><img id="shopPreviewImage" alt="Shop banner preview" hidden></div>
       <div class="actions"><button class="btn" id="saveShopBanner" type="submit">Save shop banner</button><p class="status" id="shopBannerStatus" role="status"></p></div>
     </form>
+    <hr style="border:0;border-top:1px solid var(--line);margin:36px 0">
+    <section id="socialContent">
+      <h2>Customer stories and reviews</h2><p class="hint">Add Instagram Reel previews and review customer submissions before they appear publicly.</p>
+      <form id="reelForm">
+        <div class="field"><label for="reelUrl">Instagram Reel URL</label><input id="reelUrl" type="url" placeholder="https://www.instagram.com/reel/.../" required maxlength="500"></div>
+        <div class="field"><label for="reelCaption">Caption (optional)</label><input id="reelCaption" maxlength="180"></div>
+        <div class="field photo-picker"><label for="reelVideo">Preview video (MP4, up to 100 MB)</label><input id="reelVideo" type="file" accept="video/mp4" required><p class="photo-help">The video is muted and loops in the homepage preview. The card links to the Instagram Reel.</p></div>
+        <div class="actions"><button class="btn" id="saveReel" type="submit">Add Reel</button><p class="status" id="reelStatus" role="status"></p></div>
+      </form>
+      <h3 style="margin-top:28px">Homepage Reels</h3><div class="social-list" id="adminReels"><p class="hint">Loading Reels...</p></div>
+      <h3 style="margin-top:28px">Review moderation</h3><div class="social-list" id="adminReviews"><p class="hint">Loading reviews...</p></div>
+    </section>
   </section>
   <section class="panel" id="productsPanel" style="display:none;margin-top:22px">
     <div class="section-links"><a href="#editor">Banners</a><a href="#productsPanel">Products</a></div>
@@ -144,6 +158,7 @@ async function openEditor(user) {
   if (['owner', 'manager'].includes(user.role)) {
     $('editor').style.display = 'block';
     await loadBanner();
+    await loadSocialContent();
   } else $('editor').style.display = 'none';
   await loadProducts();
 }
@@ -245,6 +260,53 @@ async function loadProducts() {
     }));
   } catch (error) { container.textContent = error.message; }
 }
+
+async function loadSocialContent() {
+  const [reelResult, reviewResult] = await Promise.allSettled([request('/api/reels/admin'), request('/api/reviews/admin')]);
+  const reels = reelResult.status === 'fulfilled' ? listOf(reelResult.value) : [];
+  const reviews = reviewResult.status === 'fulfilled' ? listOf(reviewResult.value) : [];
+  $('adminReels').replaceChildren(...(reels.length ? reels.map((reel) => {
+    const row = document.createElement('div'); row.className = 'social-row';
+    const video = document.createElement('video'); video.src = reel.videoUrl; video.muted = true; video.controls = true; video.playsInline = true;
+    const info = document.createElement('div'); info.style.flex = '1';
+    const caption = document.createElement('p'); caption.textContent = `${reel.active ? 'Visible on homepage' : 'Hidden'}${reel.caption ? ` · ${reel.caption}` : ''}`;
+    const link = document.createElement('a'); link.href = reel.instagramUrl; link.target = '_blank'; link.rel = 'noopener noreferrer'; link.textContent = 'Open Instagram Reel';
+    info.append(caption, link);
+    const actions = document.createElement('div'); actions.className = 'social-actions';
+    const toggle = document.createElement('button'); toggle.type = 'button'; toggle.textContent = reel.active ? 'Hide' : 'Show';
+    toggle.addEventListener('click', async () => { try { await request(`/api/reels/${encodeURIComponent(reel._id)}/active`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ active: !reel.active }) }); await loadSocialContent(); } catch (error) { alert(error.message); } });
+    const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = 'Delete';
+    remove.addEventListener('click', async () => { if (!confirm('Delete this Reel preview?')) return; try { await request(`/api/reels/${encodeURIComponent(reel._id)}`, { method: 'DELETE' }); await loadSocialContent(); } catch (error) { alert(error.message); } });
+    actions.append(toggle, remove); row.append(video, info, actions); return row;
+  }) : [Object.assign(document.createElement('p'), { className: 'hint', textContent: reelResult.status === 'rejected' ? reelResult.reason.message : 'No Reels added yet.' })]));
+  $('adminReviews').replaceChildren(...(reviews.length ? reviews.map((review) => {
+    const row = document.createElement('div'); row.className = 'social-row';
+    const info = document.createElement('div'); info.style.flex = '1';
+    const title = document.createElement('b'); title.textContent = `${review.customerName} · ${'★'.repeat(review.rating)} · ${review.status}`;
+    const detail = document.createElement('p'); detail.textContent = `${review.product?.name || 'Product'} — ${review.text}`;
+    const photos = document.createElement('p'); photos.textContent = `${(review.images || []).length} customer photo(s)`;
+    info.append(title, detail, photos);
+    const actions = document.createElement('div'); actions.className = 'social-actions';
+    for (const status of ['approved', 'rejected', 'pending']) {
+      const button = document.createElement('button'); button.type = 'button'; button.textContent = status[0].toUpperCase() + status.slice(1); button.disabled = review.status === status;
+      button.addEventListener('click', async () => { try { await request(`/api/reviews/${encodeURIComponent(review._id)}/status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) }); await loadSocialContent(); } catch (error) { alert(error.message); } });
+      actions.append(button);
+    }
+    const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = 'Delete';
+    remove.addEventListener('click', async () => { if (!confirm('Delete this review and its uploaded photos?')) return; try { await request(`/api/reviews/${encodeURIComponent(review._id)}`, { method: 'DELETE' }); await loadSocialContent(); } catch (error) { alert(error.message); } });
+    actions.append(remove); row.append(info, actions); return row;
+  }) : [Object.assign(document.createElement('p'), { className: 'hint', textContent: reviewResult.status === 'rejected' ? reviewResult.reason.message : 'No customer reviews submitted yet.' })]));
+}
+
+$('reelForm').addEventListener('submit', async (event) => {
+  event.preventDefault(); const status = $('reelStatus'), button = $('saveReel'); clearStatus(status); button.disabled = true;
+  const file = $('reelVideo').files[0];
+  if (!file || file.size > 100 * 1024 * 1024) { showError(status, 'Choose an MP4 video up to 100 MB.'); button.disabled = false; return; }
+  const form = new FormData(); form.append('instagramUrl', $('reelUrl').value); form.append('caption', $('reelCaption').value); form.append('video', file);
+  try { await request('/api/reels', { method: 'POST', body: form }); $('reelForm').reset(); status.textContent = 'Reel added to homepage.'; await loadSocialContent(); }
+  catch (error) { showError(status, error.message); }
+  finally { button.disabled = false; }
+});
 $('cancelEdit').addEventListener('click', resetProductForm);
 $('pPhotos').addEventListener('change', () => {
   productPhotoPreviews.forEach((url) => URL.revokeObjectURL(url));

@@ -26,6 +26,8 @@ app.use('/api/auth', require('./modules/auth/auth.routes'));
 app.use('/api/products', require('./modules/products/product.routes'));
 app.use('/api/leads', require('./modules/leads/lead.routes'));
 app.use('/api/banner', require('./modules/banner/banner.routes'));
+app.use('/api/reviews', require('./modules/reviews/review.routes'));
+app.use('/api/reels', require('./modules/reels/reel.routes'));
 
 app.use(notFound);
 app.use(errorHandler);

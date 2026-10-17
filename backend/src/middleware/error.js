@@ -14,11 +14,17 @@ exports.errorHandler = (err, req, res, next) => {
   }
   if (err.name === 'MulterError') {
     return res.status(400).json({
-      message: err.code === 'LIMIT_FILE_SIZE' ? 'Photo 5 MB se badi hai' : 'Upload error: ' + err.message,
+      message: err.code === 'LIMIT_FILE_SIZE' ? (err.field === 'video' ? 'Video must be 100 MB or smaller' : 'Photo 5 MB se badi hai') : 'Upload error: ' + err.message,
     });
   }
   if (err.message === 'INVALID_TYPE') {
     return res.status(400).json({ message: 'Sirf JPG, PNG ya WebP photos allowed hain' });
+  }
+  if (err.message === 'INVALID_VIDEO_TYPE') {
+    return res.status(400).json({ message: 'Sirf MP4 video allowed hai' });
+  }
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(400).json({ message: 'Video must be 100 MB or smaller' });
   }
   if (err.name === 'CastError') {
     return res.status(400).json({ message: 'Invalid id' });

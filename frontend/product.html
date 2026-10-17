@@ -17,6 +17,8 @@
 .row span:first-child{color:var(--muted)}
 .box{background:var(--bg);border-radius:14px;padding:20px;margin-top:20px;display:flex;flex-direction:column;gap:10px}
 h2{font-size:22px;margin:32px 0 8px}
+.review-layout{display:grid;grid-template-columns:minmax(260px,.8fr) minmax(0,1.2fr);gap:24px;margin:18px 0 48px;align-items:start}.review-form,.review-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px}.review-form{display:grid;gap:12px}.review-form label{display:grid;gap:6px;font-size:13px;font-weight:700}.review-form input,.review-form textarea,.review-form select{width:100%;border:1px solid var(--line);border-radius:9px;padding:11px;font:inherit}.review-form textarea{min-height:110px;resize:vertical}.review-list{display:grid;gap:12px}.review-card p{margin:10px 0;line-height:1.6;white-space:pre-line}.review-stars{color:#E99A13;letter-spacing:2px}.review-photos{display:flex;gap:8px;flex-wrap:wrap}.review-photos img{width:72px;height:72px;object-fit:cover;border-radius:8px}.review-status{min-height:20px}.review-status.error{color:#b91c1c}
+@media(max-width:700px){.review-layout{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -79,6 +81,20 @@ function render(p) {
 
   const spec = (k, v) => v ? h('div', { class: 'row' }, h('span', {}, k), h('span', {}, v)) : null;
 
+  const reviewSection = h('section', { class: 'product-reviews' },
+    h('h2', {}, 'Customer reviews'),
+    h('p', { class: 'muted' }, 'Share your experience with this product. Reviews are checked before they appear.'),
+    h('div', { class: 'review-layout' },
+      h('form', { class: 'review-form', id: 'reviewForm', enctype: 'multipart/form-data' },
+        h('b', {}, 'Write a review'),
+        h('label', {}, 'Your name', h('input', { name: 'customerName', maxlength: '80', required: true, autocomplete: 'name' })),
+        h('label', {}, 'Your rating', h('select', { name: 'rating', required: true }, [h('option', { value: '' }, 'Choose a rating'), ...[1,2,3,4,5].map((value) => h('option', { value }, `${value} star${value === 1 ? '' : 's'}`))])),
+        h('label', {}, 'Your review', h('textarea', { name: 'text', maxlength: '1200', required: true, placeholder: 'What did you think about this product?' })),
+        h('label', {}, 'Photos (optional, up to 3)', h('input', { name: 'images', type: 'file', accept: 'image/jpeg,image/png,image/webp', multiple: true })),
+        h('button', { class: 'btn', type: 'submit' }, 'Submit review'),
+        h('p', { class: 'muted review-status', id: 'reviewStatus', role: 'status' })),
+      h('div', { class: 'review-list', id: 'productReviews' }, h('p', { class: 'muted' }, 'Loading reviews...'))));
+
   app.replaceChildren(
     h('div', { class: 'pd' },
       h('div', {}, mainPh, thumbs),
@@ -101,7 +117,43 @@ function render(p) {
       r.cosmeticNotes ? h('p', { class: 'muted' }, r.cosmeticNotes) : null,
       (r.inspectionChecklist || []).map((x) => h('div', { class: 'row' }, h('span', {}, '✓ ' + x), h('span', {}, ''))),
       (r.includedAccessories || []).length ? h('p', { class: 'muted' }, 'Box mein: ' + r.includedAccessories.join(', ')) : null,
-    ] : null);
+    ] : null,
+    reviewSection);
+
+  loadProductReviews(p._id);
+  const reviewForm = document.getElementById('reviewForm');
+  reviewForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const status = document.getElementById('reviewStatus');
+    status.classList.remove('error'); status.textContent = '';
+    const files = reviewForm.elements.images.files;
+    if (files.length > 3 || [...files].some((file) => file.size > 5 * 1024 * 1024)) {
+      status.classList.add('error'); status.textContent = 'Choose up to 3 images, each 5 MB or smaller.'; return;
+    }
+    const button = reviewForm.querySelector('button'); button.disabled = true;
+    const data = new FormData(reviewForm); data.append('productId', p._id);
+    try {
+      const response = await api('/api/reviews', { method: 'POST', body: data });
+      status.textContent = response.message; reviewForm.reset();
+    } catch (error) { status.classList.add('error'); status.textContent = error.message; }
+    finally { button.disabled = false; }
+  });
+}
+
+function reviewCard(review) {
+  const stars = '★'.repeat(review.rating) + '☆'.repeat(5 - review.rating);
+  return h('article', { class: 'review-card' },
+    h('div', { class: 'review-stars', 'aria-label': `${review.rating} out of 5 stars` }, stars),
+    h('b', {}, review.customerName),
+    h('p', {}, review.text),
+    (review.images || []).length ? h('div', { class: 'review-photos' }, review.images.map((image) => h('img', { src: image.url, alt: 'Customer review photo', loading: 'lazy' }))) : null);
+}
+async function loadProductReviews(productId) {
+  const list = document.getElementById('productReviews');
+  try {
+    const reviews = listOf(await api('/api/reviews?product=' + encodeURIComponent(productId)));
+    list.replaceChildren(...(reviews.length ? reviews.map(reviewCard) : [h('p', { class: 'muted' }, 'No approved reviews yet. Be the first to share yours.')]));
+  } catch (error) { list.replaceChildren(h('p', { class: 'muted' }, error.message)); }
 }
 
 (async () => {
