@@ -24,6 +24,20 @@
 .advanced-filters summary:focus-visible{outline:3px solid var(--accent-soft);outline-offset:4px;border-radius:4px}
 .filter-advanced-grid{padding-top:16px}
 @media(max-width:600px){#filters{padding:15px}.filter-primary,.filter-advanced-grid{grid-template-columns:1fr}}
+nav.category-links{align-items:center;gap:10px;margin:18px 0 12px;padding-bottom:14px;border-bottom:1px solid #E2E8F0}
+nav.category-links a{display:inline-flex;align-items:center;justify-content:center;gap:8px;flex:none;padding:10px 16px;border:1px solid #E2E8F0;border-radius:12px;background:#fff;color:#64748B;box-shadow:0 1px 2px rgba(15,23,42,.05);transition:transform .2s,border-color .2s,background-color .2s,color .2s,box-shadow .2s}
+nav.category-links a:hover{transform:translateY(-2px);border-color:var(--accent);background:var(--accent-soft);color:var(--accent);box-shadow:0 5px 12px rgba(15,23,42,.1)}
+nav.category-links a.active{border-color:var(--accent);background:var(--accent);color:#fff;box-shadow:0 8px 16px rgba(37,99,235,.22)}
+nav.category-links a.active:hover{background:var(--accent-dark);color:#fff}
+.category-icon{width:17px;height:17px;flex:none}
+nav#accessoryLinks{gap:8px;margin:0 0 22px;padding:16px;border:1px solid #E8EDF5;border-radius:16px;background:#F8FAFC;box-shadow:inset 0 1px 0 rgba(255,255,255,.8)}
+nav#accessoryLinks[hidden]{display:none}
+.nav-context{flex:none;padding:0 8px 0 2px;color:#64748B;font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+nav#accessoryLinks a{padding:8px 13px;border-radius:10px;background:rgba(255,255,255,.82);font-size:13px}
+.shop-breadcrumb{display:flex;align-items:center;gap:9px;margin:22px 0 2px;color:var(--muted);font-size:13px}
+.shop-breadcrumb a{color:var(--accent);font-weight:700}.shop-breadcrumb a:hover{text-decoration:underline}
+.shop-breadcrumb span[aria-hidden="true"]{color:#94A3B8}
+@media(max-width:768px){nav.category-links{flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;scrollbar-width:thin}nav#accessoryLinks{flex-wrap:nowrap;overflow-x:auto}.shop-breadcrumb{margin-top:18px}}
 @media(max-width:700px){.shop-banner{grid-template-columns:1fr}.shop-banner img{max-height:220px}}
 </style>
 </head>
@@ -34,17 +48,19 @@
     <div><small id="shopKicker">SHOP OFFERS</small><h2 id="shopTitle">Deals on laptops and accessories</h2><p id="shopDescription">Fresh picks and offers from Vansh Computer.</p><div class="cta"><a class="btn" href="#filters">Browse products</a><a class="btn line" href="shop.html?section=accessories">Accessories</a></div></div>
     <img id="shopBannerImage" alt="Shop offer" hidden>
   </section>
+  <nav class="shop-breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span aria-hidden="true">›</span><a href="shop.html">Shop</a><span aria-hidden="true">›</span><span id="breadcrumbCurrent" aria-current="page">All products</span></nav>
   <h1 id="title">All products</h1>
   <nav class="category-links" aria-label="Shop sections">
-    <a href="shop.html" data-section="all">All products</a>
-    <a href="shop.html?section=laptop" data-section="laptop">Laptops</a>
-    <a href="shop.html?section=accessories" data-section="accessories">Accessories</a>
-    <a href="shop.html?category=desktop">Desktops</a>
-    <a href="shop.html?category=monitor">Monitors</a>
-    <a href="shop.html?category=printer">Printers</a>
-    <a href="shop.html?category=tablet">Tablets / iPad</a>
+    <a href="shop.html" data-section="all"><svg class="category-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4M8 11h6M11 8v6"/></svg>All products</a>
+    <a href="shop.html?section=laptop" data-section="laptop"><svg class="category-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="12" rx="2"/><path d="M2 20h20l-2-4H4l-2 4Z"/></svg>Laptops</a>
+    <a href="shop.html?section=accessories" data-section="accessories"><svg class="category-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg>Accessories</a>
+    <a href="shop.html?category=desktop" data-category="desktop"><svg class="category-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="13" rx="2"/><path d="M12 16v4m-4 0h8"/></svg>Desktops</a>
+    <a href="shop.html?category=monitor" data-category="monitor"><svg class="category-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M12 17v3m-4 0h8"/></svg>Monitors</a>
+    <a href="shop.html?category=printer" data-category="printer"><svg class="category-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 8V3h10v5M6 17H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v7H6z"/></svg>Printers</a>
+    <a href="shop.html?category=tablet" data-category="tablet"><svg class="category-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M11 18h2"/></svg>Tablets / iPad</a>
   </nav>
   <nav class="category-links" id="accessoryLinks" aria-label="Accessory categories" hidden>
+    <span class="nav-context">Browse accessory types</span>
     <a href="shop.html?section=accessories">All accessories</a>
     <a href="shop.html?section=accessories&subcategory=mouse">Mouse</a>
     <a href="shop.html?section=accessories&subcategory=keyboard">Keyboard</a>
@@ -109,7 +125,17 @@ if (qs.has('category') && qs.get('category') !== 'accessories' && qs.get('catego
   const label = { desktop: 'Desktops', monitor: 'Monitors', printer: 'Printers', tablet: 'Tablets / iPad' }[qs.get('category')];
   if (label) document.getElementById('title').textContent = label;
 }
-document.querySelectorAll('[data-section]').forEach((link) => { if (link.dataset.section === (section || 'all')) link.classList.add('active'); });
+const selectedCategory = qs.get('category') || '';
+document.querySelectorAll('[data-section]').forEach((link) => {
+  if (section ? link.dataset.section === section : !selectedCategory && link.dataset.section === 'all') link.classList.add('active');
+});
+document.querySelectorAll('[data-category]').forEach((link) => { if (link.dataset.category === selectedCategory) link.classList.add('active'); });
+let breadcrumbLabel = section === 'accessories' ? 'Accessories' : section === 'laptop' ? 'Laptops' : '';
+if (section === 'accessories' && qs.has('subcategory')) breadcrumbLabel += ' / ' + qs.get('subcategory').replace(/\b\w/g, (letter) => letter.toUpperCase());
+if (!breadcrumbLabel && selectedCategory) breadcrumbLabel = ({ desktop: 'Desktops', monitor: 'Monitors', printer: 'Printers', tablet: 'Tablets / iPad' })[selectedCategory] || 'Shop';
+if (!breadcrumbLabel && qs.has('brand')) breadcrumbLabel = qs.get('brand') + ' laptops';
+if (!breadcrumbLabel && qs.has('maxPrice')) breadcrumbLabel = (qs.get('type') === 'refurbished' ? 'Refurbished ' : '') + 'Under ₹' + Number(qs.get('maxPrice')).toLocaleString('en-IN');
+document.getElementById('breadcrumbCurrent').textContent = breadcrumbLabel || 'All products';
 
 async function loadShopBanner() {
   try {

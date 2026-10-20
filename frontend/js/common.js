@@ -16,6 +16,7 @@ function h(tag, attrs, ...kids) {
   for (const [k, v] of Object.entries(attrs || {})) {
     if (k === 'class') e.className = v;
     else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else if (typeof v === 'boolean' && k in e) e[k] = v;
     else e.setAttribute(k, v);
   }
   for (const c of kids.flat(Infinity)) {
@@ -95,11 +96,13 @@ function renderChrome() {
           '<a href="shop.html?type=refurbished&maxPrice=20000">Under ₹20,000</a><a href="shop.html?type=refurbished&maxPrice=30000">Under ₹30,000</a></div></div>' +
         '<div class="dd"><button type="button" class="ddb">Services ' + ICON.chev + '</button><div class="ddm">' +
           '<a href="services.html#laptop">Laptop Repair</a><a href="services.html#computer">Computer Repair</a><a href="services.html#macbook">MacBook Repair</a></div></div>' +
-        '<a href="contact.html">Contact</a>' +
+        '<a href="cart.html" id="cartNav" class="cart-link"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg><span class="cart-count">Cart (0)</span></a>' +
       '</nav>' +
     '</div></header>';
 
   const nav = document.getElementById('mainnav'), bg = document.getElementById('burger');
+  updateCartCount();
+  window.addEventListener('storage', updateCartCount);
   bg.addEventListener('click', () => { const o = nav.classList.toggle('open'); bg.setAttribute('aria-expanded', o); });
   document.querySelectorAll('.ddb').forEach((b) => b.addEventListener('click', () => b.parentElement.classList.toggle('open')));
   document.getElementById('hsearch').addEventListener('submit', (e) => {
@@ -116,4 +119,16 @@ function renderChrome() {
       '<div><b>Repair &amp; support</b><a href="/#repair-support">Repair services</a><a class="footer-contact" href="https://wa.me/' + S.whatsapp + '?text=' + encodeURIComponent('Hi, mujhe repair ya support chahiye') + '" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11.5a8 8 0 0 1-11.8 7L4 20l1.5-4.1A8 8 0 1 1 20 11.5Z"/><path d="M9 9c.6 2 2 3.4 4 4l1-1 2 1c-.2 1.4-1.2 2-2.4 1.8-3.3-.6-5.8-3.2-6.2-6.2C7.2 7.4 8 6.5 9.4 6.5L10.5 8 9 9Z"/></svg><span>WhatsApp support</span></a><a class="footer-contact" href="tel:' + S.phone + '">Call our team</a></div>' +
       '<div><b>Visit our store</b><p>' + S.addressFull + '</p><p>' + S.hours + '</p><a href="' + S.mapsUrl + '" target="_blank" rel="noopener">Get directions ↗</a></div>' +
     '</div><div class="wrap fcopy">© 2026 Vansh Computer. All rights reserved.</div></footer>';
+}
+
+function getCart() {
+  try {
+    const items = JSON.parse(localStorage.getItem('vanshCart') || '[]');
+    return Array.isArray(items) ? items.filter((item) => item && item.slug && Number.isFinite(Number(item.price)) && Number.isFinite(Number(item.quantity)) && Number(item.quantity) > 0) : [];
+  } catch (_) { return []; }
+}
+function updateCartCount() {
+  const link = document.getElementById('cartNav');
+  const count = link && link.querySelector('.cart-count');
+  if (count) count.textContent = 'Cart (' + getCart().reduce((sum, item) => sum + Number(item.quantity), 0) + ')';
 }

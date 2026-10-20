@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Your Cart | Vansh Computer</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/site.css">
+<style>
+.cart-page{background:#f1f3f6}.cart-page main.wrap{min-height:60vh}.cart-layout{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:16px;margin:24px 0 48px;align-items:start}.cart-items{display:block;overflow:hidden;border-radius:4px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.1)}.cart-item{display:grid;grid-template-columns:120px minmax(0,1fr) auto;gap:20px;align-items:center;padding:24px;border:0;border-bottom:1px solid #f0f0f0;border-radius:0;background:#fff}.cart-item:last-child{border-bottom:0}.cart-item img{width:100px;height:100px;object-fit:contain;border-radius:4px;background:#f8f9fa}.cart-item h2{font-size:16px;margin:0 0 6px}.cart-item p{margin:0}.quantity{display:flex;align-items:center;gap:10px;margin-top:10px}.quantity button,.remove-item{min-width:34px;min-height:34px;border:1px solid var(--line);border-radius:4px;background:#fff;font:inherit;cursor:pointer}.remove-item{padding:0 10px;color:#b91c1c}.cart-summary{position:sticky;top:80px;padding:20px;border:0;border-radius:4px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.1)}.cart-summary h2{margin:0 0 16px;font-size:20px}.cart-total{display:flex;justify-content:space-between;padding:14px 0;border-top:1px solid var(--line);font-size:18px;font-weight:800}.checkout-form{display:grid;gap:12px;margin-top:18px}.checkout-form label{display:grid;gap:6px;font-size:13px;font-weight:700}.checkout-form input,.checkout-form textarea{width:100%;min-width:0;border:1px solid #cbd5e1;border-radius:4px;padding:11px;font:inherit}.checkout-form textarea{min-height:76px;resize:vertical}.checkout-form .btn{width:100%;min-height:52px;padding:0 16px;border-radius:3px;background:#fb641b;color:#fff;font-weight:700;text-transform:uppercase;box-shadow:0 2px 5px rgba(251,100,27,.24)}.checkout-form .btn:hover{background:#e85b18}.empty-cart{padding:28px;border:1px dashed var(--line);border-radius:4px;background:#fff;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.1)}.empty-cart .btn{margin-top:12px}
+@media(max-width:760px){.cart-layout{grid-template-columns:1fr}.cart-summary{position:static}}
+@media(max-width:480px){.cart-item{grid-template-columns:64px minmax(0,1fr);gap:12px}.cart-item img{width:64px;height:64px}.remove-item{grid-column:2;justify-self:start}}
+</style>
+</head>
+<body class="cart-page">
+<div id="hdr"></div>
+<main class="wrap">
+  <h1>Your cart</h1>
+  <div class="cart-layout">
+    <section id="cartItems" class="cart-items" aria-live="polite"></section>
+    <aside id="cartSummary" class="cart-summary"></aside>
+  </div>
+</main>
+<div id="ftr"></div>
+<script src="js/common.js"></script>
+<script>
+renderChrome();
+const itemsEl = document.getElementById('cartItems');
+const summaryEl = document.getElementById('cartSummary');
+const money = (value) => '₹ ' + Number(value).toLocaleString('en-IN');
+
+function saveCart(cart) {
+  localStorage.setItem('vanshCart', JSON.stringify(cart));
+  updateCartCount();
+  renderCart();
+}
+function renderCart() {
+  const cart = getCart();
+  if (!cart.length) {
+    itemsEl.replaceChildren(h('div', { class: 'empty-cart' }, h('p', { class: 'muted' }, 'Your cart is empty.'), h('a', { class: 'btn', href: 'shop.html' }, 'Browse products')));
+    summaryEl.replaceChildren(h('h2', {}, 'Order summary'), h('p', { class: 'muted' }, 'Add products to see your total.'));
+    return;
+  }
+  itemsEl.replaceChildren(...cart.map((item, index) => {
+    const image = item.image ? h('img', { src: img(item.image, 300), alt: item.name, loading: 'lazy' }) : h('div', { class: 'cart-image-placeholder' }, 'No photo');
+    const qty = h('div', { class: 'quantity', 'aria-label': 'Quantity' },
+      h('button', { type: 'button', 'aria-label': 'Decrease quantity', onclick: () => { if (item.quantity <= 1) cart.splice(index, 1); else item.quantity--; saveCart(cart); } }, '−'),
+      h('span', {}, item.quantity),
+      h('button', { type: 'button', 'aria-label': 'Increase quantity', disabled: Number.isFinite(item.stock) && item.quantity >= item.stock, onclick: () => { if (!Number.isFinite(item.stock) || item.quantity < item.stock) item.quantity++; saveCart(cart); } }, '+'));
+    return h('article', { class: 'cart-item' }, image,
+      h('div', {}, h('h2', {}, item.name), h('p', { class: 'muted' }, money(item.price) + ' each'), qty),
+      h('button', { class: 'remove-item', type: 'button', onclick: () => { cart.splice(index, 1); saveCart(cart); } }, 'Remove'));
+  }));
+  const total = cart.reduce((sum, item) => sum + Number(item.price) * Number(item.quantity), 0);
+  const name = h('input', { name: 'customerName', autocomplete: 'name', required: true, maxlength: '80' });
+  const phone = h('input', { name: 'phone', type: 'tel', autocomplete: 'tel', required: true, pattern: '[0-9+() -]{8,20}', title: 'Enter a valid phone number' });
+  const address = h('textarea', { name: 'address', autocomplete: 'street-address', required: true, maxlength: '300' });
+  const form = h('form', { class: 'checkout-form' },
+    h('label', {}, 'Name', name), h('label', {}, 'Phone', phone), h('label', {}, 'Delivery address', address),
+    h('button', { class: 'btn', type: 'submit' }, 'Continue on WhatsApp'));
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const lines = cart.map((item) => `${item.name} × ${item.quantity} — ${money(Number(item.price) * Number(item.quantity))}`);
+    const message = `Hi, I would like to place an order:\n\n${lines.join('\n')}\n\nTotal: ${money(total)}\n\nName: ${name.value.trim()}\nPhone: ${phone.value.trim()}\nDelivery address: ${address.value.trim()}`;
+    window.open('https://wa.me/' + STORE.whatsapp + '?text=' + encodeURIComponent(message), '_blank', 'noopener,noreferrer');
+  });
+  summaryEl.replaceChildren(h('h2', {}, 'Order summary'),
+    h('div', { class: 'cart-total' }, h('span', {}, 'Total'), h('span', {}, money(total))),
+    h('p', { class: 'muted' }, 'Delivery and final availability will be confirmed by our team.'), form);
+}
+window.addEventListener('storage', renderCart);
+renderCart();
+</script>
+</body>
+</html>
