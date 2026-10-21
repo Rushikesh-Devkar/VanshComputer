@@ -51,14 +51,15 @@ function render(p) {
   const addToCart = h('button', { class: 'btn', type: 'button', disabled: sold }, sold ? 'Sold out' : 'Add to Cart');
   addToCart.addEventListener('click', () => {
     try {
-      const cart = JSON.parse(localStorage.getItem('vanshCart') || '[]');
+      const cart = getCart();
       const existing = cart.find((item) => item.slug === p.slug);
-      if (existing && Number.isFinite(p.stock) && existing.quantity >= p.stock) {
+      const maxQuantity = p.type === 'refurbished' ? 1 : Math.min(10, Number(p.stock) || 0);
+      if (existing && existing.quantity >= maxQuantity) {
         cartStatus.textContent = 'Maximum available quantity is already in your cart.';
         return;
       }
       if (existing) existing.quantity += 1;
-      else cart.push({ slug: p.slug, name: p.name, price: p.price, image: photos[0] && photos[0].url, stock: p.stock, quantity: 1 });
+      else cart.push({ productId: p._id, slug: p.slug, quantity: 1 });
       localStorage.setItem('vanshCart', JSON.stringify(cart));
       updateCartCount();
       cartStatus.textContent = p.name + ' added to cart.';

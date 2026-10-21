@@ -11,6 +11,7 @@ body{background:#F5F7FB}.admin{max-width:1000px;margin:36px auto 64px;padding:0 
 .admin h1{margin:0 0 8px}.hint{color:var(--muted);line-height:1.6;margin:0 0 24px}.field{display:grid;gap:7px;margin:18px 0}.field label{font-weight:700;font-size:14px}.field input,.field textarea{width:100%;border:1px solid #d5dbe7;border-radius:10px;padding:12px;font:inherit}.field textarea{min-height:110px;resize:vertical}.field input[type=file]{background:#fff}.preview{overflow:hidden;border-radius:14px;min-height:240px;padding:30px;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(220px,.9fr);gap:24px;align-items:center;background:linear-gradient(115deg,#0F172A,#172554 60%,#2563EB);color:#fff;margin:22px 0}.preview.no-image{grid-template-columns:1fr}.preview-content{min-width:0}.preview small{color:#BFDBFE;font-weight:700;letter-spacing:1px}.preview h2{font-size:clamp(28px,5vw,44px);line-height:1.08;white-space:pre-line;margin:10px 0}.preview p{white-space:pre-line;color:#E2E8F0}.preview img{width:100%;max-height:280px;object-fit:contain;border-radius:12px}.preview img[hidden]{display:none}.actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.status{min-height:24px;color:#166534;font-weight:600}.status.error{color:#b91c1c}.topline{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:18px}.topline a{color:var(--accent);font-weight:700}#editor{display:none}
 @media(max-width:700px){.preview{grid-template-columns:1fr}.preview.no-image{grid-template-columns:1fr}.preview img{max-height:220px}}
 .product-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:0 18px}.product-form .wide{grid-column:1/-1}.admin-list{display:grid;gap:10px;margin-top:18px}.admin-product{display:flex;justify-content:space-between;gap:12px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:12px}.admin-product-actions{display:flex;gap:8px}.admin-product button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 12px;cursor:pointer}.section-links{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}.section-links a{background:#fff;border:1px solid var(--line);padding:9px 12px;border-radius:9px;font-weight:700;color:var(--accent)}
+.order-row{display:grid;gap:12px;padding:16px;border:1px solid var(--line);border-radius:12px;background:#fff}.order-row p{margin:4px 0;line-height:1.5}.order-actions,.order-filters{display:flex;gap:10px;align-items:end;flex-wrap:wrap}.order-actions input,.order-filters input,.order-filters select{min-height:40px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font:inherit}.order-filters label{display:grid;gap:5px;font-size:12px;font-weight:700}.order-filters button{min-height:40px}.shipping-preview{padding:14px;border-radius:10px;background:var(--accent-soft);color:var(--accent-dark);font-weight:700}
 .photo-picker{background:#F8FAFF;border:1px dashed #94A3B8;border-radius:12px;padding:16px}.photo-picker input{background:#fff}.photo-help{margin:8px 0 0;color:var(--muted);font-size:13px}.photo-thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.photo-thumbs img{width:76px;height:64px;object-fit:cover;border-radius:7px;border:1px solid var(--line)}
 .social-list{display:grid;gap:10px;margin:16px 0}.social-row{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:14px;border:1px solid var(--line);border-radius:12px}.social-row p{margin:5px 0;color:var(--muted);font-size:14px;line-height:1.5}.social-row video{width:72px;max-height:128px;object-fit:cover;border-radius:8px;background:#111}.social-actions{display:flex;gap:8px;flex-wrap:wrap}.social-actions button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 11px;font:inherit;font-weight:700;cursor:pointer}.social-actions button:hover{border-color:var(--accent);color:var(--accent)}.admin .field input[type=file]{padding:10px}
 @media(max-width:600px){.social-row{align-items:flex-start;flex-direction:column}.social-row video{width:100%;max-width:160px}}
@@ -29,7 +30,7 @@ body{background:#F5F7FB}.admin{max-width:1000px;margin:36px auto 64px;padding:0 
   </section>
 
   <section class="panel" id="editor">
-    <div class="section-links"><a href="#editor">Homepage banner</a><a href="#shopBannerForm">Shop offer banner</a><a href="#socialContent">Reviews &amp; Reels</a><a href="#productsPanel">Products</a></div>
+    <div class="section-links"><a href="#editor">Homepage banner</a><a href="#shopBannerForm">Shop offer banner</a><a href="#socialContent">Reviews &amp; Reels</a><a href="#productsPanel">Products</a><a href="#shippingPanel">Shipping Settings</a><a href="#ordersPanel">Orders</a></div>
     <h1>Homepage banner</h1><p class="hint">Update the banner text and optional image. “Shop Now” and “Get a Callback” stay on the banner automatically.</p>
     <form id="bannerForm">
       <div class="field"><label for="kicker">Small heading</label><input id="kicker" maxlength="100" required></div>
@@ -61,6 +62,35 @@ body{background:#F5F7FB}.admin{max-width:1000px;margin:36px auto 64px;padding:0 
       <h3 style="margin-top:28px">Homepage Reels</h3><div class="social-list" id="adminReels"><p class="hint">Loading Reels...</p></div>
       <h3 style="margin-top:28px">Review moderation</h3><div class="social-list" id="adminReviews"><p class="hint">Loading reviews...</p></div>
     </section>
+    <hr style="border:0;border-top:1px solid var(--line);margin:36px 0">
+    <section id="shippingPanel">
+      <h2>Shipping Settings</h2><p class="hint">Configure Maharashtra delivery charges and the free-delivery offer. Prices are calculated by the server and saved with each order.</p>
+      <form id="shippingForm">
+        <div class="product-form">
+          <div class="field"><label for="shippingCharge">Maharashtra delivery charge (₹)</label><input id="shippingCharge" type="number" min="0" step="1" placeholder="Set courier charge"></div>
+          <div class="field"><label style="font-weight:500"><input id="freeDeliveryEnabled" type="checkbox" checked> Free delivery offer ON</label></div>
+          <div class="field"><label for="freeDeliveryMinimum">Free delivery minimum order (₹, optional)</label><input id="freeDeliveryMinimum" type="number" min="0" step="1" placeholder="No minimum"></div>
+          <div class="field"><label for="freeDeliveryEndsAt">Offer end date (optional)</label><input id="freeDeliveryEndsAt" type="datetime-local"></div>
+          <div class="field wide"><label for="returnPolicyText">Return policy text (optional)</label><textarea id="returnPolicyText" maxlength="2000" placeholder="Leave blank until the business policy is confirmed."></textarea></div>
+          <div class="field"><label for="gstin">GSTIN (optional; not used in totals)</label><input id="gstin" maxlength="20"></div>
+          <div class="field"><label for="gstRate">GST rate (optional; not used in totals)</label><input id="gstRate" type="number" min="0" max="100" step="0.01"></div>
+        </div>
+        <p class="hint">GST fields are stored for future invoice setup only. Tax is not calculated until the GSTIN and applicable tax treatment are verified.</p>
+        <div class="shipping-preview" id="shippingPreview" aria-live="polite"></div>
+        <div class="actions"><button class="btn" type="submit">Save shipping settings</button><p class="status" id="shippingStatus" role="status"></p></div>
+      </form>
+    </section>
+    <hr style="border:0;border-top:1px solid var(--line);margin:36px 0">
+    <section id="ordersPanel">
+      <h2>Orders</h2><p class="hint">Review guest orders, verified payment status, and courier tracking. Payment status is confirmed only by verified Razorpay webhooks.</p>
+      <form class="order-filters" id="orderFilters">
+        <label>Order number<input id="orderSearch" maxlength="24"></label>
+        <label>Status<select id="orderStatusFilter"><option value="">All statuses</option><option>pending_payment</option><option>paid</option><option>processing</option><option>shipped</option><option>delivered</option><option>payment_failed</option><option>cancelled</option><option>expired</option><option>refund_pending</option><option>refund_review</option><option>refunded</option><option>refund_failed</option></select></label>
+        <label>From<input id="orderFrom" type="date"></label><label>To<input id="orderTo" type="date"></label>
+        <button class="btn" type="submit">Search orders</button>
+      </form>
+      <div class="admin-list" id="adminOrders"><p class="hint">Loading orders...</p></div>
+    </section>
   </section>
   <section class="panel" id="productsPanel" style="display:none;margin-top:22px">
     <div class="section-links"><a href="#editor">Banners</a><a href="#productsPanel">Products</a></div>
@@ -75,6 +105,7 @@ body{background:#F5F7FB}.admin{max-width:1000px;margin:36px auto 64px;padding:0 
         <div class="field"><label for="pSubcategory">Accessory type / subcategory</label><input id="pSubcategory" list="accessoryTypes" placeholder="Mouse, keyboard, charger..."><datalist id="accessoryTypes"><option value="mouse"><option value="keyboard"><option value="keypad"><option value="printer"><option value="charger"><option value="bag"><option value="mouse pad"><option value="laptop stand"><option value="headphones"><option value="bluetooth speaker"><option value="earbuds"><option value="tablet"><option value="webcam"><option value="cable"><option value="adapter"></datalist></div>
         <div class="field"><label for="pType">Condition *</label><select id="pType"><option value="new">New</option><option value="refurbished">Refurbished</option></select></div>
         <div class="field"><label for="pSku">SKU / stock code *</label><input id="pSku" required maxlength="100"></div>
+        <div class="field"><label for="pHsn">HSN code (optional)</label><input id="pHsn" maxlength="8" inputmode="numeric"></div>
         <div class="field"><label for="pPrice">Price (₹) *</label><input id="pPrice" type="number" min="1" required></div>
         <div class="field"><label for="pStock">Quantity in stock</label><input id="pStock" type="number" min="0" value="1"></div>
         <div class="field"><label for="pWarranty">Warranty (months)</label><input id="pWarranty" type="number" min="0" value="6"></div>
@@ -152,6 +183,74 @@ function updatePreview() {
   $('preview').classList.toggle('no-image', !imageUrl);
 }
 async function loadBanner() { setPreview(await request('/api/banner')); }
+function updateShippingPreview() {
+  const enabled = $('freeDeliveryEnabled').checked;
+  const minimum = $('freeDeliveryMinimum').value;
+  const charge = $('shippingCharge').value;
+  const end = $('freeDeliveryEndsAt').value;
+  const expired = end && new Date(end) < new Date();
+  const expiry = end ? ` until ${new Date(end).toLocaleString()}` : '';
+  const paidShipping = charge ? `Other orders use ₹${Number(charge).toLocaleString('en-IN')} delivery.` : 'Set a delivery charge for orders outside the offer.';
+  $('shippingPreview').textContent = enabled && expired
+    ? `The free-delivery offer has expired. ${charge ? `Maharashtra delivery charge is ₹${Number(charge).toLocaleString('en-IN')}.` : 'Set a Maharashtra delivery charge before accepting orders.'}`
+    : enabled
+    ? minimum || end ? `Free delivery on Maharashtra orders of ₹${Number(minimum || 0).toLocaleString('en-IN')} or more${expiry}. ${paidShipping}` : 'Free delivery applies to all Maharashtra orders with no end date.'
+    : charge ? `Free delivery is OFF. Maharashtra delivery charge: ₹${Number(charge).toLocaleString('en-IN')}.` : 'Free delivery is OFF. Set the Maharashtra courier charge before accepting orders.';
+}
+async function loadShippingSettings() {
+  const settings = await request('/api/orders/shipping');
+  $('shippingCharge').value = settings.maharashtraCharge ?? '';
+  $('freeDeliveryEnabled').checked = settings.freeDeliveryEnabled !== false;
+  $('freeDeliveryMinimum').value = settings.freeDeliveryMinimum ?? '';
+  $('freeDeliveryEndsAt').value = settings.freeDeliveryEndsAt ? new Date(settings.freeDeliveryEndsAt).toISOString().slice(0, 16) : '';
+  $('returnPolicyText').value = settings.returnPolicyText || '';
+  $('gstin').value = settings.gstin || '';
+  $('gstRate').value = settings.gstRate ?? '';
+  updateShippingPreview();
+}
+async function loadOrders() {
+  const params = new URLSearchParams();
+  if ($('orderSearch').value.trim()) params.set('q', $('orderSearch').value.trim());
+  if ($('orderStatusFilter').value) params.set('status', $('orderStatusFilter').value);
+  if ($('orderFrom').value) params.set('from', new Date($('orderFrom').value + 'T00:00:00').toISOString());
+  if ($('orderTo').value) params.set('to', new Date($('orderTo').value + 'T23:59:59.999').toISOString());
+  const container = $('adminOrders');
+  try {
+    const orders = listOf(await request('/api/orders/admin?' + params));
+    if (!orders.length) { container.replaceChildren(Object.assign(document.createElement('p'), { className: 'hint', textContent: 'No orders match these filters.' })); return; }
+    container.replaceChildren(...orders.map((order) => {
+      const row = document.createElement('article'); row.className = 'order-row';
+      const summary = document.createElement('div');
+      const title = document.createElement('b'); title.textContent = `${order.orderNumber} · ${order.status.replaceAll('_', ' ')} · ${order.paymentStatus.replaceAll('_', ' ')}`;
+      const customer = document.createElement('p'); customer.textContent = `${order.customer.name} · ${order.customer.phone}${order.customer.email ? ' · ' + order.customer.email : ''}`;
+      const address = document.createElement('p'); address.textContent = `${order.address.line1}${order.address.line2 ? ', ' + order.address.line2 : ''}, ${order.address.city}, ${order.address.district}, Maharashtra ${order.address.pinCode}`;
+      const products = document.createElement('p'); products.textContent = order.items.map((item) => `${item.name} × ${item.quantity} · ₹${Number(item.lineTotal).toLocaleString('en-IN')} · ${item.warrantyMonths} month warranty`).join(' | ');
+      const totals = document.createElement('p'); totals.textContent = `Subtotal ₹${Number(order.subtotal).toLocaleString('en-IN')} · Discount ₹${Number(order.discount).toLocaleString('en-IN')} · Delivery ₹${Number(order.shippingCharge).toLocaleString('en-IN')} · Total ₹${Number(order.total).toLocaleString('en-IN')}`;
+      const paymentInfo = document.createElement('p'); paymentInfo.textContent = `Razorpay order: ${order.razorpayOrderId || 'not created'} · Payment: ${order.razorpayPaymentId || 'not captured'} · Refund: ${order.razorpayRefundId || 'none'}`;
+      const tracking = document.createElement('p'); tracking.textContent = `Courier: ${order.courierName || 'not entered'} · Tracking: ${order.trackingNumber || 'not entered'}`;
+      summary.append(title, customer, address, products, totals, paymentInfo, tracking); row.append(summary);
+      const actions = document.createElement('div'); actions.className = 'order-actions';
+      const update = async (status, extra = {}) => { await request('/api/orders/admin/' + encodeURIComponent(order._id), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status, ...extra }) }); await loadOrders(); };
+      const button = (label, action) => { const el = document.createElement('button'); el.type = 'button'; el.className = 'btn line'; el.textContent = label; el.addEventListener('click', () => action().catch((error) => alert(error.message))); actions.append(el); };
+      if (order.status === 'paid') {
+        button('Mark processing', () => update('processing'));
+        button('Request full refund', async () => { if (!confirm(`Request a full verified-provider refund for ${order.orderNumber}?`)) return; await request('/api/orders/admin/' + encodeURIComponent(order._id) + '/refund', { method: 'POST' }); await loadOrders(); });
+      }
+      if (order.status === 'processing') {
+        const courier = document.createElement('input'); courier.placeholder = 'Courier company'; courier.maxLength = 100; courier.value = order.courierName || '';
+        const trackingNo = document.createElement('input'); trackingNo.placeholder = 'Tracking number'; trackingNo.maxLength = 100; trackingNo.value = order.trackingNumber || '';
+        actions.append(courier, trackingNo);
+        button('Mark shipped', () => update('shipped', { courierName: courier.value.trim(), trackingNumber: trackingNo.value.trim() }));
+        button('Request full refund', async () => { if (!confirm(`Request a full verified-provider refund for ${order.orderNumber}?`)) return; await request('/api/orders/admin/' + encodeURIComponent(order._id) + '/refund', { method: 'POST' }); await loadOrders(); });
+      }
+      if (order.status === 'shipped') button('Mark delivered', () => update('delivered'));
+      if (order.status === 'pending_payment') button('Cancel and release stock', () => update('cancelled'));
+      if (order.status === 'refund_failed') button('Retry full refund', async () => { if (!confirm(`Retry a full refund for ${order.orderNumber}?`)) return; await request('/api/orders/admin/' + encodeURIComponent(order._id) + '/refund', { method: 'POST' }); await loadOrders(); });
+      if (actions.childElementCount) row.append(actions);
+      return row;
+    }));
+  } catch (error) { container.replaceChildren(Object.assign(document.createElement('p'), { className: 'status error', textContent: error.message })); }
+}
 async function openEditor(user) {
   if (!['owner', 'manager', 'inventory'].includes(user.role)) throw new Error('Products ke liye owner, manager, ya inventory account chahiye.');
   $('loginPanel').style.display = 'none'; $('productsPanel').style.display = 'block'; $('logout').hidden = false;
@@ -159,6 +258,7 @@ async function openEditor(user) {
     $('editor').style.display = 'block';
     await loadBanner();
     await loadSocialContent();
+    await Promise.all([loadShippingSettings(), loadOrders()]);
   } else $('editor').style.display = 'none';
   await loadProducts();
 }
@@ -169,6 +269,21 @@ $('loginForm').addEventListener('submit', async (event) => {
     await openEditor(user);
   } catch (error) { showError(status, error.message); }
 });
+$('shippingForm').addEventListener('input', updateShippingPreview);
+$('shippingForm').addEventListener('submit', async (event) => {
+  event.preventDefault(); const status = $('shippingStatus'); clearStatus(status);
+  const payload = {
+    maharashtraCharge: $('shippingCharge').value === '' ? null : Number($('shippingCharge').value),
+    freeDeliveryEnabled: $('freeDeliveryEnabled').checked,
+    freeDeliveryMinimum: $('freeDeliveryMinimum').value === '' ? null : Number($('freeDeliveryMinimum').value),
+    freeDeliveryEndsAt: $('freeDeliveryEndsAt').value ? new Date($('freeDeliveryEndsAt').value).toISOString() : null,
+    returnPolicyText: $('returnPolicyText').value.trim(), gstin: $('gstin').value.trim(),
+    gstRate: $('gstRate').value === '' ? null : Number($('gstRate').value),
+  };
+  try { await request('/api/orders/shipping', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); status.textContent = 'Shipping settings saved.'; updateShippingPreview(); }
+  catch (error) { showError(status, error.message); }
+});
+$('orderFilters').addEventListener('submit', (event) => { event.preventDefault(); loadOrders(); });
 $('bannerForm').addEventListener('input', updatePreview);
 $('image').addEventListener('change', () => {
   if (selectedImagePreviewUrl) URL.revokeObjectURL(selectedImagePreviewUrl);
@@ -227,7 +342,7 @@ function editProduct(product) {
   $('photoHelp').textContent = `Already saved: ${currentImageCount} photo(s). Add photos to reach at least 5 total (maximum 8).`;
   const values = {
     pName: product.name, pBrand: product.brand, pSection: product.section || 'laptop', pCategory: product.category || 'laptop',
-    pSubcategory: product.subcategory || '', pType: product.type, pSku: product.sku, pPrice: product.price,
+    pSubcategory: product.subcategory || '', pType: product.type, pSku: product.sku, pHsn: product.hsnCode || '', pPrice: product.price,
     pStock: product.stock, pWarranty: product.warrantyMonths, pCpu: product.specs?.cpu || '', pRam: product.specs?.ram || '',
     pStorage: product.specs?.storage || '', pGpu: product.specs?.gpu || '', pScreen: product.specs?.screen || '', pOs: product.specs?.os || '',
     pGrade: product.refurbished?.grade || '', pBattery: product.refurbished?.batteryHealth ?? '', pCosmetic: product.refurbished?.cosmeticNotes || '',
@@ -337,7 +452,7 @@ $('productForm').addEventListener('submit', async (event) => {
   const grade = $('pGrade').value, battery = $('pBattery').value;
   const payload = {
     name: $('pName').value.trim(), brand: $('pBrand').value.trim(), section: $('pSection').value, category: $('pCategory').value,
-    subcategory: $('pSubcategory').value.trim().toLowerCase(), type: $('pType').value, sku: $('pSku').value.trim(),
+    subcategory: $('pSubcategory').value.trim().toLowerCase(), type: $('pType').value, sku: $('pSku').value.trim(), hsnCode: $('pHsn').value.trim(),
     price: Number($('pPrice').value), stock: Number($('pStock').value || 0), warrantyMonths: Number($('pWarranty').value || 0),
     storageGb: (() => { const match = $('pStorage').value.match(/([\d.]+)\s*(tb|gb)/i); return match ? Math.round(Number(match[1]) * (/tb/i.test(match[2]) ? 1024 : 1)) : null; })(),
     specs: { cpu: $('pCpu').value.trim(), ram: $('pRam').value.trim(), storage: $('pStorage').value.trim(), gpu: $('pGpu').value.trim(), screen: $('pScreen').value.trim(), os: $('pOs').value.trim() },

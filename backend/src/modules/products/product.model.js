@@ -15,6 +15,7 @@ const productSchema = new mongoose.Schema({
   subcategory: { type: String, trim: true, lowercase: true, default: '', index: true },
   type: { type: String, enum: ['new', 'refurbished'], required: true, index: true },
   sku: { type: String, required: true, unique: true, trim: true },
+  hsnCode: { type: String, trim: true, maxlength: 8, default: '' },
   specs: {
     cpu: { type: String, default: '' },
     ram: { type: String, default: '' },

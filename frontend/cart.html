@@ -1,75 +1,99 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Your Cart | Vansh Computer</title>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/site.css">
-<style>
-.cart-page{background:#f1f3f6}.cart-page main.wrap{min-height:60vh}.cart-layout{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:16px;margin:24px 0 48px;align-items:start}.cart-items{display:block;overflow:hidden;border-radius:4px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.1)}.cart-item{display:grid;grid-template-columns:120px minmax(0,1fr) auto;gap:20px;align-items:center;padding:24px;border:0;border-bottom:1px solid #f0f0f0;border-radius:0;background:#fff}.cart-item:last-child{border-bottom:0}.cart-item img{width:100px;height:100px;object-fit:contain;border-radius:4px;background:#f8f9fa}.cart-item h2{font-size:16px;margin:0 0 6px}.cart-item p{margin:0}.quantity{display:flex;align-items:center;gap:10px;margin-top:10px}.quantity button,.remove-item{min-width:34px;min-height:34px;border:1px solid var(--line);border-radius:4px;background:#fff;font:inherit;cursor:pointer}.remove-item{padding:0 10px;color:#b91c1c}.cart-summary{position:sticky;top:80px;padding:20px;border:0;border-radius:4px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.1)}.cart-summary h2{margin:0 0 16px;font-size:20px}.cart-total{display:flex;justify-content:space-between;padding:14px 0;border-top:1px solid var(--line);font-size:18px;font-weight:800}.checkout-form{display:grid;gap:12px;margin-top:18px}.checkout-form label{display:grid;gap:6px;font-size:13px;font-weight:700}.checkout-form input,.checkout-form textarea{width:100%;min-width:0;border:1px solid #cbd5e1;border-radius:4px;padding:11px;font:inherit}.checkout-form textarea{min-height:76px;resize:vertical}.checkout-form .btn{width:100%;min-height:52px;padding:0 16px;border-radius:3px;background:#fb641b;color:#fff;font-weight:700;text-transform:uppercase;box-shadow:0 2px 5px rgba(251,100,27,.24)}.checkout-form .btn:hover{background:#e85b18}.empty-cart{padding:28px;border:1px dashed var(--line);border-radius:4px;background:#fff;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.1)}.empty-cart .btn{margin-top:12px}
-@media(max-width:760px){.cart-layout{grid-template-columns:1fr}.cart-summary{position:static}}
-@media(max-width:480px){.cart-item{grid-template-columns:64px minmax(0,1fr);gap:12px}.cart-item img{width:64px;height:64px}.remove-item{grid-column:2;justify-self:start}}
-</style>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Checkout | Vansh Computer</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/site.css"><link rel="stylesheet" href="css/checkout-flow.css">
 </head>
-<body class="cart-page">
-<div id="hdr"></div>
+<body class="checkout-page"><div id="hdr"></div>
 <main class="wrap">
-  <h1>Your cart</h1>
-  <div class="cart-layout">
-    <section id="cartItems" class="cart-items" aria-live="polite"></section>
-    <aside id="cartSummary" class="cart-summary"></aside>
+  <header class="checkout-heading"><div><h1>Secure checkout</h1><p>Review your items and complete your order.</p></div><span class="checkout-lock">🔒 Secure checkout</span></header>
+  <div class="checkout-shell">
+    <section class="checkout-main" aria-label="Checkout steps">
+      <ol class="checkout-stepper" id="checkoutStepper" aria-label="Checkout progress"></ol>
+      <div class="checkout-panel" id="flowPanel" aria-live="polite"></div>
+    </section>
+    <aside class="checkout-summary" id="cartSummary" aria-label="Order summary"></aside>
   </div>
-</main>
-<div id="ftr"></div>
-<script src="js/common.js"></script>
-<script>
+</main><div id="ftr"></div>
+<script src="js/common.js"></script><script>
 renderChrome();
-const itemsEl = document.getElementById('cartItems');
-const summaryEl = document.getElementById('cartSummary');
-const money = (value) => '₹ ' + Number(value).toLocaleString('en-IN');
-
-function saveCart(cart) {
-  localStorage.setItem('vanshCart', JSON.stringify(cart));
-  updateCartCount();
-  renderCart();
+const itemsEl=document.getElementById('flowPanel'),summaryEl=document.getElementById('cartSummary'),stepperEl=document.getElementById('checkoutStepper');
+const money=(value)=>'₹ '+Number(value||0).toLocaleString('en-IN');
+const stages=['Cart','Delivery','Payment','Done'];
+let stage=0,latestQuote=null,loadingQuote=false,quoteError='',paymentTab='UPI',couponMessage='',pinMessage='';const productMeta=new Map();
+const customer={name:'',phone:'',email:'',gstin:''};
+const address={line1:'',line2:'',city:'',district:'',state:'Maharashtra',pinCode:''};
+let cart=getCart();
+try{const saved=JSON.parse(localStorage.getItem('vanshSavedAddress')||'null');if(saved&&typeof saved==='object')Object.assign(address,saved)}catch(_){ }
+const updateStepper=()=>{const active=stage>=2?2:stage;stepperEl.replaceChildren(...stages.map((label,index)=>{const done=index<active,li=h('li',{class:'checkout-step'+(index===active?' is-current':'')+(done?' is-done':'')},h('span',{class:'step-dot','aria-hidden':'true'},done?'✓':String(index+1)),h('span',{},label));if(index<stages.length-1)return [li,h('li',{class:'step-line','aria-hidden':'true'})];return li}).flat())};
+function cartPayload(){return cart.map(item=>({productId:item.productId,quantity:Number(item.quantity)}))}
+async function refreshQuote(){
+  cart=getCart();latestQuote=null;quoteError='';
+  if(!cart.length){loadingQuote=false;render();return}
+  loadingQuote=true;render();
+  try{await migrateCartIds(cart);cart=getCart();latestQuote=await api('/api/orders/quote',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:cartPayload(),address:{state:'Maharashtra'}})});await Promise.all(latestQuote.items.map(async line=>{if(!line.slug||productMeta.has(line.slug))return;try{productMeta.set(line.slug,await api('/api/products/'+encodeURIComponent(line.slug)))}catch(_){}}));}
+  catch(error){quoteError=error.message||'We could not load your current cart. Please try again.'}
+  finally{loadingQuote=false;render()}
 }
-function renderCart() {
-  const cart = getCart();
-  if (!cart.length) {
-    itemsEl.replaceChildren(h('div', { class: 'empty-cart' }, h('p', { class: 'muted' }, 'Your cart is empty.'), h('a', { class: 'btn', href: 'shop.html' }, 'Browse products')));
-    summaryEl.replaceChildren(h('h2', {}, 'Order summary'), h('p', { class: 'muted' }, 'Add products to see your total.'));
-    return;
-  }
-  itemsEl.replaceChildren(...cart.map((item, index) => {
-    const image = item.image ? h('img', { src: img(item.image, 300), alt: item.name, loading: 'lazy' }) : h('div', { class: 'cart-image-placeholder' }, 'No photo');
-    const qty = h('div', { class: 'quantity', 'aria-label': 'Quantity' },
-      h('button', { type: 'button', 'aria-label': 'Decrease quantity', onclick: () => { if (item.quantity <= 1) cart.splice(index, 1); else item.quantity--; saveCart(cart); } }, '−'),
-      h('span', {}, item.quantity),
-      h('button', { type: 'button', 'aria-label': 'Increase quantity', disabled: Number.isFinite(item.stock) && item.quantity >= item.stock, onclick: () => { if (!Number.isFinite(item.stock) || item.quantity < item.stock) item.quantity++; saveCart(cart); } }, '+'));
-    return h('article', { class: 'cart-item' }, image,
-      h('div', {}, h('h2', {}, item.name), h('p', { class: 'muted' }, money(item.price) + ' each'), qty),
-      h('button', { class: 'remove-item', type: 'button', onclick: () => { cart.splice(index, 1); saveCart(cart); } }, 'Remove'));
-  }));
-  const total = cart.reduce((sum, item) => sum + Number(item.price) * Number(item.quantity), 0);
-  const name = h('input', { name: 'customerName', autocomplete: 'name', required: true, maxlength: '80' });
-  const phone = h('input', { name: 'phone', type: 'tel', autocomplete: 'tel', required: true, pattern: '[0-9+() -]{8,20}', title: 'Enter a valid phone number' });
-  const address = h('textarea', { name: 'address', autocomplete: 'street-address', required: true, maxlength: '300' });
-  const form = h('form', { class: 'checkout-form' },
-    h('label', {}, 'Name', name), h('label', {}, 'Phone', phone), h('label', {}, 'Delivery address', address),
-    h('button', { class: 'btn', type: 'submit' }, 'Continue on WhatsApp'));
-  form.addEventListener('submit', (event) => {
-    event.preventDefault();
-    const lines = cart.map((item) => `${item.name} × ${item.quantity} — ${money(Number(item.price) * Number(item.quantity))}`);
-    const message = `Hi, I would like to place an order:\n\n${lines.join('\n')}\n\nTotal: ${money(total)}\n\nName: ${name.value.trim()}\nPhone: ${phone.value.trim()}\nDelivery address: ${address.value.trim()}`;
-    window.open('https://wa.me/' + STORE.whatsapp + '?text=' + encodeURIComponent(message), '_blank', 'noopener,noreferrer');
-  });
-  summaryEl.replaceChildren(h('h2', {}, 'Order summary'),
-    h('div', { class: 'cart-total' }, h('span', {}, 'Total'), h('span', {}, money(total))),
-    h('p', { class: 'muted' }, 'Delivery and final availability will be confirmed by our team.'), form);
+async function migrateCartIds(items){for(const item of items){if(!item.productId&&item.slug)item.productId=(await api('/api/products/'+encodeURIComponent(item.slug)))._id}localStorage.setItem('vanshCart',JSON.stringify(items));updateCartCount()}
+function createField(label,key,attrs={}){const input=h('input',{name:key,value:key==='state'?'Maharashtra':(key==='pinCode'?address.pinCode:customer[key]??address[key]??''),...attrs});if(key==='state'){input.readOnly=true;input.value='Maharashtra'}return h('label',{class:'checkout-field'+(attrs.class?' '+attrs.class:'')},label,input)}
+function lineItems(){if(!latestQuote)return [];const byId=new Map(cart.map(item=>[String(item.productId),item]));return latestQuote.items.map(line=>({line,item:byId.get(String(line.product))||{quantity:line.quantity}}))}
+function renderStepper(){updateStepper()}
+function renderSummary(){
+  const title=h('h2',{},'Order summary');
+  if(loadingQuote){summaryEl.replaceChildren(title,h('div',{class:'summary-loading'},h('div',{class:'summary-skeleton'}),h('div',{class:'summary-skeleton'}),h('div',{class:'summary-skeleton'}),h('div',{class:'summary-skeleton'}),h('p',{class:'summary-note'},'Loading current prices and availability…')));return}
+  if(!cart.length){summaryEl.replaceChildren(title,h('p',{class:'summary-note'},'Your cart is empty. Add an item to see the order total.'));return}
+  if(!latestQuote){summaryEl.replaceChildren(title,h('p',{class:'checkout-error'},quoteError||'Current prices are temporarily unavailable.'),h('button',{class:'checkout-ghost full',type:'button',onclick:refreshQuote},'Try again'));return}
+  const mini=latestQuote.items.map(line=>h('div',{class:'mini-product'},line.imageUrl?h('img',{src:img(line.imageUrl,120),alt:line.name}):h('div',{class:'mini-image'},'—'),h('div',{},h('strong',{},line.name),h('small',{},'Qty '+line.quantity)),h('span',{class:'mini-price'},money(line.lineTotal))));
+  const shipping=latestQuote.shippingCharge===0?'FREE':money(latestQuote.shippingCharge);
+  const parts=[title,h('div',{class:'summary-items'},...mini),h('div',{class:'summary-row'},h('span',{},'Items ('+latestQuote.items.reduce((n,x)=>n+x.quantity,0)+')'),h('b',{},money(latestQuote.subtotal))),h('div',{class:'summary-row'},h('span',{},'Delivery'),h('b',{class:latestQuote.shippingCharge===0?'free':''},shipping)),h('div',{class:'summary-row'},h('span',{},'GST'),h('b',{},'Not configured')),h('div',{class:'summary-total'},h('span',{},'Total'),h('span',{},money(latestQuote.total))),h('p',{class:'summary-note'},'GST is not included as a separate calculation in the current checkout.'),h('ul',{class:'trust-list'},h('li',{},'Warranty period shown on eligible products'),h('li',{},'Secure payment powered by Razorpay'),h('li',{},'Stock held while payment is completed'))];
+  if(stage===0)parts.splice(parts.length-1,0,h('form',{class:'coupon-form',id:'couponForm'},h('input',{name:'coupon',placeholder:'Coupon code',autocomplete:'off','aria-label':'Coupon code'}),h('button',{type:'submit'},'Apply')),couponMessage?h('p',{class:'coupon-message',role:'status'},couponMessage):null);
+  summaryEl.replaceChildren(...parts);
 }
-window.addEventListener('storage', renderCart);
-renderCart();
-</script>
-</body>
-</html>
+function productCard(line,item,index){
+  const product=productMeta.get(line.slug)||{};const refurb=product.refurbished||{};const specs=product.specs||{};const props=[];if(line.type==='refurbished'){if(refurb.grade)props.push(h('span',{class:'checkout-pill grade'},'Grade '+refurb.grade));if(refurb.batteryHealth!=null)props.push(h('span',{class:'checkout-pill'},'Battery '+refurb.batteryHealth+'%'))}else props.push(h('span',{class:'checkout-pill'},'New'));props.push(h('span',{class:'checkout-pill green'},line.availableStock>0?'In stock':'Availability limited'));
+  const detail=[specs.cpu,specs.ram,specs.storage].filter(Boolean).join(' · ')||line.sku||'Product details';
+  return h('article',{class:'flow-card cart-product'},line.imageUrl?h('img',{src:img(line.imageUrl,220),alt:line.name,loading:'lazy'}):h('div',{},'Product'),h('div',{},h('h3',{},line.name),h('p',{class:'product-specs'},detail),h('div',{class:'pill-row'},...props),h('div',{class:'quantity'},h('button',{type:'button','aria-label':'Decrease quantity',onclick:()=>changeQty(index,-1)},'−'),h('span',{},item.quantity),h('button',{type:'button','aria-label':'Increase quantity',disabled:Number(item.quantity)>=Number(line.availableStock),onclick:()=>changeQty(index,1)},'+'),h('button',{class:'remove-item',type:'button',onclick:()=>removeItem(index)},'Remove'))),h('div',{class:'product-price'},money(line.unitPrice),h('small',{class:'product-specs'},money(line.lineTotal)+' total')));
+}
+function renderCart(){
+  const title=h('div',{class:'checkout-section-title'},h('h2',{},'Your cart'),h('small',{},cart.reduce((n,item)=>n+item.quantity,0)+' item(s)'));
+  if(!cart.length){itemsEl.replaceChildren(h('div',{class:'empty-cart'},h('h2',{},'Your cart is empty'),h('p',{class:'product-specs'},'Browse the store and add products to start checkout.'),h('a',{class:'checkout-btn',href:'shop.html'},'Browse products')));return}
+  const products=latestQuote?lineItems().map(({line,item},i)=>productCard(line,item,cart.findIndex(c=>String(c.productId)===String(line.product)))):cart.map((item,index)=>h('article',{class:'flow-card cart-product'},item.image?h('img',{src:img(item.image,220),alt:item.name||'Product'}):h('div',{},'Product'),h('div',{},h('h3',{},item.name||'Product'),h('p',{class:'product-specs'},loadingQuote?'Loading current price and stock…':quoteError),h('div',{class:'quantity'},h('button',{type:'button','aria-label':'Decrease quantity',onclick:()=>changeQty(index,-1)},'−'),h('span',{},item.quantity),h('button',{type:'button','aria-label':'Increase quantity',onclick:()=>changeQty(index,1)},'+'),h('button',{class:'remove-item',type:'button',onclick:()=>removeItem(index)},'Remove'))),h('div',{class:'product-price'},'—')));
+  const pinInput=h('input',{id:'deliveryPin',inputmode:'numeric',autocomplete:'postal-code',maxlength:'6',placeholder:'Enter 6-digit PIN code',value:address.pinCode});
+  itemsEl.replaceChildren(title,...products,h('section',{class:'flow-card'},h('div',{class:'checkout-section-title'},h('h2',{},'Check delivery'),h('small',{},'Maharashtra only')),h('form',{class:'delivery-check',id:'pinForm'},h('label',{class:'checkout-field'},'PIN code',pinInput),h('button',{class:'checkout-ghost',type:'submit'},'Check')),pinMessage?h('p',{class:'pin-status'+(pinMessage.startsWith('Enter')?' error':''),role:'status'},pinMessage):h('p',{class:'product-specs pin-note'},'Enter your PIN to save it for delivery details. Availability is confirmed during checkout.')),
+    quoteError?h('div',{class:'checkout-error',role:'alert'},quoteError,h('button',{class:'checkout-ghost',type:'button',onclick:refreshQuote},'Retry')):null,
+    h('div',{class:'checkout-actions'},h('a',{class:'checkout-ghost',href:'shop.html'},'Continue shopping'),h('button',{class:'checkout-btn',type:'button',disabled:!latestQuote,onclick:()=>{if(!latestQuote)return;stage=1;render() }},'Proceed to Delivery →')));
+}
+function renderDelivery(){
+  const form=h('form',{id:'deliveryForm'},h('div',{class:'checkout-section-title'},h('h2',{},'Delivery details'),h('small',{},'Fields marked * are required')),h('div',{class:'field-grid'},createField('Full name *','name',{autocomplete:'name',required:true,maxlength:'100'}),createField('Mobile number *','phone',{type:'tel',autocomplete:'tel',required:true,pattern:'[0-9+() -]{8,24}',title:'Enter a valid Indian mobile number'}),createField('Email (optional)','email',{type:'email',autocomplete:'email',maxlength:'200',class:'field-span'}),createField('Address line 1 *','line1',{autocomplete:'address-line1',required:true,minlength:'5',maxlength:'160',class:'field-span'}),createField('Address line 2 (optional)','line2',{autocomplete:'address-line2',maxlength:'160',class:'field-span'}),createField('City *','city',{autocomplete:'address-level2',required:true,maxlength:'80'}),createField('District *','district',{required:true,maxlength:'80'}),createField('State','state',{autocomplete:'address-level1'}),createField('PIN code *','pinCode',{autocomplete:'postal-code',inputmode:'numeric',pattern:'[1-9][0-9]{5}',required:true,maxlength:'6'})),h('label',{class:'check-row'},h('input',{type:'checkbox',id:'whatsappUpdates'}),'Send order updates on WhatsApp (preference for this checkout)'),h('label',{class:'check-row'},h('input',{type:'checkbox',id:'saveAddress'}),'Save this address on this device'),h('p',{class:'product-specs'},'We only deliver within Maharashtra. Address details are submitted securely when you place your order.'),h('p',{class:'checkout-status',id:'deliveryError','aria-live':'polite'}),h('div',{class:'checkout-actions'},h('button',{class:'checkout-ghost',type:'button',onclick:()=>{stage=0;render()}},'← Back'),h('button',{class:'checkout-btn',type:'submit'},'Continue to Review →')));
+  itemsEl.replaceChildren(form);
+  const f=document.getElementById('deliveryForm');Object.entries(customer).forEach(([k,v])=>{if(f.elements[k])f.elements[k].value=v});Object.entries(address).forEach(([k,v])=>{if(f.elements[k])f.elements[k].value=k==='state'?'Maharashtra':v});
+  f.addEventListener('submit',e=>{e.preventDefault();if(!f.reportValidity())return;const data=new FormData(f);for(const key of Object.keys(customer))customer[key]=String(data.get(key)||'').trim();for(const key of Object.keys(address))address[key]=key==='state'?'Maharashtra':String(data.get(key)||'').trim();if(document.getElementById('saveAddress').checked){localStorage.setItem('vanshSavedAddress',JSON.stringify({...address,state:'Maharashtra'}))}stage=2;render()});
+}
+function addressText(){return [address.line1,address.line2,address.city,address.district,'Maharashtra '+address.pinCode].filter(Boolean).join(', ')}
+function renderReview(){
+  const express=h('label',{class:'delivery-option disabled'},h('input',{type:'radio',name:'deliveryMethod',disabled:true}),h('span',{},h('b',{},'Express delivery'),h('small',{},'1–2 days · Not available through current shipping setup')),h('span',{},'₹ 199'));
+  const standard=h('label',{class:'delivery-option selected'},h('input',{type:'radio',name:'deliveryMethod',checked:true}),h('span',{},h('b',{},'Standard delivery'),h('small',{},'Current Maharashtra shipping rate')),h('b',{class:latestQuote?.shippingCharge===0?'free':''},latestQuote&&latestQuote.shippingCharge===0?'FREE':money(latestQuote?.shippingCharge)));
+  const gst=createField('GSTIN for business invoice (optional)','gstin',{maxlength:'20',autocomplete:'off'});gst.querySelector('input').value=customer.gstin;
+  itemsEl.replaceChildren(h('div',{class:'checkout-section-title'},h('h2',{},'Review your order')),h('section',{class:'flow-card'},h('div',{class:'checkout-section-title'},h('h3',{},'Delivery address'),h('button',{class:'edit-link',type:'button',onclick:()=>{stage=1;render()}},'Edit')),h('p',{class:'address-preview'},customer.name+' · '+customer.phone,h('br'),addressText())),h('section',{class:'flow-card'},h('h3',{},'Delivery method'),h('div',{class:'delivery-options'},standard,express),h('p',{class:'product-specs'},'Delivery pricing and timing follow the store’s configured shipping service.')),h('section',{class:'flow-card'},h('h3',{},'GST invoice (optional)'),gst,h('p',{class:'product-specs'},'GST calculation is not configured for this store checkout.')),h('div',{class:'checkout-actions'},h('button',{class:'checkout-ghost',type:'button',onclick:()=>{stage=1;render()}},'← Back'),h('button',{class:'checkout-btn',type:'button',onclick:()=>{customer.gstin=gst.querySelector('input').value.trim();stage=3;render()}},'Continue to Payment →')));
+}
+function renderPayment(){
+  const labels=['UPI','Cards','Net banking','Wallets','EMI'];const tabs=labels.map(label=>h('button',{class:'payment-tab',type:'button','aria-selected':String(paymentTab===label),onclick:()=>{paymentTab=label;renderPayment()}},label));
+  const contents={UPI:['Pay with UPI','Use a UPI app or enter UPI details inside Razorpay’s secure payment window.',['Google Pay','PhonePe','Paytm','BHIM']],Cards:['Pay by card','Enter card details only in Razorpay’s secure payment window.',['Credit card','Debit card']], 'Net banking':['Net banking','Choose your bank in Razorpay Checkout.',['Major Indian banks']],Wallets:['Wallets','Select an available wallet in Razorpay Checkout.',['Available wallets']],EMI:['EMI','Check eligible card EMI options securely in Razorpay Checkout.',['Eligibility shown by provider']]};const content=contents[paymentTab];
+  itemsEl.replaceChildren(h('div',{class:'checkout-section-title'},h('h2',{},'Choose payment method'),h('small',{},'256-bit secured by Razorpay')),h('div',{class:'payment-layout'},h('div',{class:'payment-tabs','role':'tablist','aria-label':'Payment methods'},...tabs),h('section',{class:'payment-content','role':'tabpanel'},h('h3',{},content[0]),h('p',{},content[1]),h('div',{class:'payment-apps'},...content[2].map(x=>h('span',{},x))))),h('div',{class:'payment-warning'},'Cash on delivery is not available. Pay online using UPI, card, net banking, wallet, or EMI where available.'),h('p',{class:'checkout-status',id:'paymentStatus','aria-live':'polite'}),h('button',{class:'checkout-btn full',id:'payButton',type:'button',disabled:!latestQuote,onclick:startPayment},'🔒 Pay '+money(latestQuote?.total||0)),h('p',{class:'powered-by'},'Powered by Razorpay · Payment details are never stored by Vansh Computer.'),h('div',{class:'checkout-actions'},h('button',{class:'checkout-ghost',type:'button',onclick:()=>{stage=2;render()}},'← Back'),h('span',{})));
+}
+function render(){renderStepper();renderSummary();if(stage===0)renderCart();else if(stage===1)renderDelivery();else if(stage===2)renderReview();else if(stage===3)renderPayment();bindCommonForms()}
+function bindCommonForms(){const coupon=document.getElementById('couponForm');if(coupon)coupon.addEventListener('submit',e=>{e.preventDefault();couponMessage='Coupon discounts are not configured for this checkout.';renderSummary()});const pin=document.getElementById('pinForm');if(pin)pin.addEventListener('submit',e=>{e.preventDefault();const value=document.getElementById('deliveryPin').value.trim();address.pinCode=value;if(!/^[1-9][0-9]{5}$/.test(value)){pinMessage='Enter a valid 6-digit PIN code.';render();return}pinMessage='PIN saved. Final serviceability and delivery estimate are confirmed by the store.';render()})}
+function changeQty(index,delta){const item=cart[index];if(!item)return;const next=Number(item.quantity)+delta;if(next<1){removeItem(index);return}item.quantity=next;localStorage.setItem('vanshCart',JSON.stringify(cart));updateCartCount();refreshQuote()}
+function removeItem(index){cart.splice(index,1);localStorage.setItem('vanshCart',JSON.stringify(cart));updateCartCount();refreshQuote()}
+async function startPayment(){const btn=document.getElementById('payButton'),status=document.getElementById('paymentStatus');btn.disabled=true;status.textContent='Creating your secure payment…';try{
+  if(!latestQuote)throw new Error('Current order total is unavailable. Refresh your cart and try again.');
+  const created=await api('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:cartPayload(),expectedTotal:latestQuote.total,customer,address:{...address,state:'Maharashtra'}})});
+  await new Promise((resolve,reject)=>{if(window.Razorpay)return resolve();const script=document.createElement('script');script.src='https://checkout.razorpay.com/v1/checkout.js';script.onload=resolve;script.onerror=()=>reject(new Error('Could not load Razorpay Checkout. Your stock reservation will expire automatically.'));document.head.append(script)});
+  const payment=new Razorpay({key:created.keyId,order_id:created.razorpayOrderId,amount:created.amount,currency:created.currency,name:'Vansh Computer',description:'Order '+created.orderNumber,prefill:{name:created.customer.name,email:created.customer.email,contact:created.customer.phone},notes:{orderNumber:created.orderNumber},handler:async response=>{status.textContent='Verifying payment response…';try{const verification=await api('/api/orders/'+encodeURIComponent(created.orderNumber)+'/payment/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(response)});sessionStorage.setItem('vanshCheckoutReceipt',JSON.stringify({created,response,verification,customer,address,items:created.items,total:created.total,shippingCharge:latestQuote.shippingCharge,createdAt:new Date().toISOString()}));localStorage.removeItem('vanshCart');updateCartCount();location.href='order-confirmation.html?order='+encodeURIComponent(created.orderNumber)}catch(error){status.textContent=error.message+' Keep your order number: '+created.orderNumber;btn.disabled=false}},modal:{ondismiss:()=>{btn.disabled=false;status.textContent='Payment window closed. Your order '+created.orderNumber+' remains reserved until '+new Date(created.reservationExpiresAt).toLocaleTimeString()+'. You can retry payment from the cart.'}}});payment.open();
+ }catch(error){status.textContent=error.message;if(error.message.includes('cart total changed'))await refreshQuote();btn.disabled=false}}
+window.addEventListener('storage',()=>{cart=getCart();refreshQuote()});
+render();refreshQuote();
+</script></body></html>

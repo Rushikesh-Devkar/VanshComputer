@@ -37,6 +37,7 @@ const productBase = z.object({
   subcategory: z.string().trim().max(80).optional(),
   type: z.enum(['new', 'refurbished']),
   sku: z.string().trim().min(1).max(100),
+  hsnCode: z.string().trim().max(8).optional().default(''),
   specs: z.object({
     cpu: z.string().optional().default(''),
     ram: z.string().optional().default(''),

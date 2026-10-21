@@ -124,7 +124,8 @@ function renderChrome() {
 function getCart() {
   try {
     const items = JSON.parse(localStorage.getItem('vanshCart') || '[]');
-    return Array.isArray(items) ? items.filter((item) => item && item.slug && Number.isFinite(Number(item.price)) && Number.isFinite(Number(item.quantity)) && Number(item.quantity) > 0) : [];
+    return Array.isArray(items) ? items.filter((item) => item && (item.productId || item.slug) && Number.isInteger(Number(item.quantity)) && Number(item.quantity) > 0 && Number(item.quantity) <= 10)
+      .map((item) => ({ productId: item.productId || '', slug: item.slug || '', quantity: Number(item.quantity) })) : [];
   } catch (_) { return []; }
 }
 function updateCartCount() {

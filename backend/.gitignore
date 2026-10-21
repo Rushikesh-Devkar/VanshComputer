@@ -1,4 +1,17 @@
 node_modules/
 .env
+.env.*
+!.env.example
+login.json
+cookies.txt
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+.aws/
+.ssh/
+.credentials/
+*.zip
 *.log
 .DS_Store

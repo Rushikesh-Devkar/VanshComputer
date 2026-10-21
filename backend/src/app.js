@@ -18,6 +18,8 @@ const origins = (process.env.CLIENT_ORIGIN || 'http://localhost:5173')
   .split(',').map(o => o.trim()).filter(Boolean);
 app.use(cors({ origin: origins, credentials: true }));
 
+// Razorpay signs the original bytes, so this route must run before JSON parsing.
+app.post('/api/orders/webhook', express.raw({ type: 'application/json', limit: '1mb' }), require('./modules/orders/order.controller').webhook);
 app.use(express.json({ limit: '100kb' }));
 app.use(cookieParser());
 
@@ -28,6 +30,7 @@ app.use('/api/leads', require('./modules/leads/lead.routes'));
 app.use('/api/banner', require('./modules/banner/banner.routes'));
 app.use('/api/reviews', require('./modules/reviews/review.routes'));
 app.use('/api/reels', require('./modules/reels/reel.routes'));
+app.use('/api/orders', require('./modules/orders/orders.routes'));
 
 app.use(notFound);
 app.use(errorHandler);

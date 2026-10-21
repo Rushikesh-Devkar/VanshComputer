@@ -1,0 +1,15 @@
+**/.env export-ignore
+**/.env.* export-ignore
+backend/login.json export-ignore
+backend/cookies.txt export-ignore
+**/secrets/** export-ignore
+**/.aws/** export-ignore
+**/.ssh/** export-ignore
+**/.credentials/** export-ignore
+**/*.pem export-ignore
+**/*.key export-ignore
+**/*.p12 export-ignore
+**/*.pfx export-ignore
+**/*.cred export-ignore
+**/*.secret export-ignore
+**/*.token export-ignore

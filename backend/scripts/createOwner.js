@@ -14,4 +14,4 @@ const User = require('../src/modules/auth/user.model');
   await User.create({ name, email, passwordHash, role: 'owner' });
   console.log('Owner created:', email);
   await mongoose.disconnect();
-})().catch(e => { console.error(e.message); process.exit(1); });
+})().catch(() => { console.error('Owner setup failed. Check database configuration and account details.'); process.exit(1); });

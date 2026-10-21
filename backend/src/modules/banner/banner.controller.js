@@ -101,11 +101,11 @@ exports.update = async (req, res, next) => {
     });
     const oldPublicId = previous && previous.imagePublicId;
     if (oldPublicId && oldPublicId !== saved.imagePublicId) {
-      cloudinary.uploader.destroy(oldPublicId).catch((e) => console.error('Old banner image cleanup failed:', e.message));
+      cloudinary.uploader.destroy(oldPublicId).catch(() => console.error('Old banner image cleanup failed.'));
     }
     const oldShopPublicId = previous && previous.shopImagePublicId;
     if (oldShopPublicId && oldShopPublicId !== saved.shopImagePublicId) {
-      cloudinary.uploader.destroy(oldShopPublicId).catch((e) => console.error('Old shop banner cleanup failed:', e.message));
+      cloudinary.uploader.destroy(oldShopPublicId).catch(() => console.error('Old shop banner cleanup failed.'));
     }
     res.json({ ...DEFAULT_BANNER, ...saved.toObject() });
   } catch (e) {

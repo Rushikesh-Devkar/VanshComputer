@@ -3,6 +3,9 @@
 exports.notFound = (req, res) => res.status(404).json({ message: 'Route not found' });
 
 exports.errorHandler = (err, req, res, next) => {
+  if (err.status && err.status >= 400 && err.status < 600) {
+    return res.status(err.status).json({ message: err.message || 'Request failed' });
+  }
   if (err instanceof ZodError) {
     return res.status(400).json({
       message: 'Validation failed',
@@ -29,6 +32,6 @@ exports.errorHandler = (err, req, res, next) => {
   if (err.name === 'CastError') {
     return res.status(400).json({ message: 'Invalid id' });
   }
-  console.error(err);
+  console.error('Unhandled request error:', err && err.name || 'Error');
   res.status(500).json({ message: 'Something went wrong' });
 };

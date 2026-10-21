@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 module.exports = async function connectDB() {
-  const mongoUri = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/vanshcomputer';
+  const mongoUri = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/vanshcomputer?replicaSet=rs0';
   mongoose.set('strictQuery', true);
 
   // Fail fast: DB ke bina API ka koi matlab nahi, isliye error throw hoga
