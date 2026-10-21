@@ -7,7 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/site.css">
 <style>
-.shop-banner{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(240px,.9fr);gap:28px;align-items:center;background:linear-gradient(115deg,#0F172A,#172554 60%,#2563EB);border-radius:18px;color:#fff;padding:clamp(24px,5vw,52px);margin:26px 0}.shop-banner.no-image{grid-template-columns:1fr}.shop-banner small{color:#BFDBFE;font-weight:700;letter-spacing:1px}.shop-banner h2{font-size:clamp(28px,4.5vw,46px);line-height:1.1;margin:10px 0}.shop-banner p{color:#E2E8F0;line-height:1.6;white-space:pre-line}.shop-banner img{width:100%;max-height:300px;object-fit:contain;border-radius:12px}.shop-banner img[hidden]{display:none}.category-links{display:flex;gap:9px;flex-wrap:wrap;margin:18px 0}.category-links a{border:1px solid var(--line);border-radius:99px;padding:9px 14px;font-size:14px;font-weight:700}.category-links a.active,.category-links a:hover{background:var(--accent);border-color:var(--accent);color:#fff}.filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));align-items:end}.filters label{display:grid;gap:6px;color:var(--muted);font-size:12px;font-weight:700}.filters select,.filters input{width:100%;min-width:0}.filter-group{display:flex;gap:7px}.filter-group input{min-width:0}
+.shop-banner{position:relative;isolation:isolate;display:block;aspect-ratio:2400 / 567;overflow:hidden;border-radius:18px;background:#fff;color:#fff;margin:26px 0}.shop-banner img{position:absolute;inset:0;z-index:0;width:100%;height:100%;object-fit:cover;border-radius:inherit}.shop-banner img[hidden]{display:none}.category-links{display:flex;gap:9px;flex-wrap:wrap;margin:18px 0}.category-links a{border:1px solid var(--line);border-radius:99px;padding:9px 14px;font-size:14px;font-weight:700}.category-links a.active,.category-links a:hover{background:var(--accent);border-color:var(--accent);color:#fff}.filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));align-items:end}.filters label{display:grid;gap:6px;color:var(--muted);font-size:12px;font-weight:700}.filters select,.filters input{width:100%;min-width:0}.filter-group{display:flex;gap:7px}.filter-group input{min-width:0}
 #filters{display:grid;gap:18px;padding:20px;border:1px solid var(--line);border-radius:16px;background:#F8FAFC;overflow:visible}
 .filter-section-title{margin:0 0 12px;color:var(--ink);font-size:14px;font-weight:800}
 .filter-primary,.filter-advanced-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(220px,100%),1fr));gap:16px;align-items:end}
@@ -38,14 +38,13 @@ nav#accessoryLinks a{padding:8px 13px;border-radius:10px;background:rgba(255,255
 .shop-breadcrumb a{color:var(--accent);font-weight:700}.shop-breadcrumb a:hover{text-decoration:underline}
 .shop-breadcrumb span[aria-hidden="true"]{color:#94A3B8}
 @media(max-width:768px){nav.category-links{flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;scrollbar-width:thin}nav#accessoryLinks{flex-wrap:nowrap;overflow-x:auto}.shop-breadcrumb{margin-top:18px}}
-@media(max-width:700px){.shop-banner{grid-template-columns:1fr}.shop-banner img{max-height:220px}}
+@media(max-width:700px){.shop-banner{border-radius:12px}}
 </style>
 </head>
 <body>
 <div id="hdr"></div>
 <main class="wrap">
   <section class="shop-banner no-image" id="shopBanner">
-    <div><small id="shopKicker">SHOP OFFERS</small><h2 id="shopTitle">Deals on laptops and accessories</h2><p id="shopDescription">Fresh picks and offers from Vansh Computer.</p><div class="cta"><a class="btn" href="#filters">Browse products</a><a class="btn line" href="shop.html?section=accessories">Accessories</a></div></div>
     <img id="shopBannerImage" alt="Shop offer" hidden>
   </section>
   <nav class="shop-breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span aria-hidden="true">›</span><a href="shop.html">Shop</a><span aria-hidden="true">›</span><span id="breadcrumbCurrent" aria-current="page">All products</span></nav>
@@ -140,12 +139,8 @@ document.getElementById('breadcrumbCurrent').textContent = breadcrumbLabel || 'A
 async function loadShopBanner() {
   try {
     const banner = await api('/api/banner');
-    document.getElementById('shopKicker').textContent = banner.shopKicker;
-    document.getElementById('shopTitle').textContent = banner.shopTitle;
-    document.getElementById('shopDescription').textContent = banner.shopDescription;
     if (banner.shopImageUrl) {
       const image = document.getElementById('shopBannerImage'); image.src = banner.shopImageUrl; image.hidden = false;
-      document.getElementById('shopBanner').classList.remove('no-image');
     }
   } catch (error) { console.error('Shop banner load failed:', error.message); }
 }
