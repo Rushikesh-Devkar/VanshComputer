@@ -7,19 +7,21 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/site.css">
 <style>
-body{background:#F5F7FB}.admin{max-width:1000px;margin:36px auto 64px;padding:0 18px}.panel{background:#fff;border:1px solid var(--line);border-radius:16px;padding:clamp(20px,4vw,36px);box-shadow:0 12px 32px rgba(15,23,42,.06)}
+body{background:#F3F6FA}.admin{max-width:none;margin:0;padding:0}.panel{background:#fff;border:1px solid var(--line);border-radius:16px;padding:clamp(20px,4vw,36px);box-shadow:0 12px 32px rgba(15,23,42,.06)}
 .admin h1{margin:0 0 8px}.hint{color:var(--muted);line-height:1.6;margin:0 0 24px}.field{display:grid;gap:7px;margin:18px 0}.field label{font-weight:700;font-size:14px}.field input,.field textarea{width:100%;border:1px solid #d5dbe7;border-radius:10px;padding:12px;font:inherit}.field textarea{min-height:110px;resize:vertical}.field input[type=file]{background:#fff}.preview{overflow:hidden;border-radius:14px;min-height:240px;padding:30px;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(220px,.9fr);gap:24px;align-items:center;background:linear-gradient(115deg,#0F172A,#172554 60%,#2563EB);color:#fff;margin:22px 0}.preview.no-image{grid-template-columns:1fr}.preview-content{min-width:0}.preview small{color:#BFDBFE;font-weight:700;letter-spacing:1px}.preview h2{font-size:clamp(28px,5vw,44px);line-height:1.08;white-space:pre-line;margin:10px 0}.preview p{white-space:pre-line;color:#E2E8F0}.preview img{width:100%;max-height:280px;object-fit:contain;border-radius:12px}.preview img[hidden]{display:none}.actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.status{min-height:24px;color:#166534;font-weight:600}.status.error{color:#b91c1c}.topline{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:18px}.topline a{color:var(--accent);font-weight:700}#editor{display:none}
 @media(max-width:700px){.preview{grid-template-columns:1fr}.preview.no-image{grid-template-columns:1fr}.preview img{max-height:220px}}
 .product-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:0 18px}.product-form .wide{grid-column:1/-1}.admin-list{display:grid;gap:10px;margin-top:18px}.admin-product{display:flex;justify-content:space-between;gap:12px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:12px}.admin-product-actions{display:flex;gap:8px}.admin-product button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 12px;cursor:pointer}.section-links{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}.section-links a{background:#fff;border:1px solid var(--line);padding:9px 12px;border-radius:9px;font-weight:700;color:var(--accent)}
+.topline{padding:18px 28px;margin:0;background:#fff;border-bottom:1px solid #e5eaf2}.dashboard{display:none;min-height:100vh}.dashboard-layout{display:grid;grid-template-columns:248px minmax(0,1fr);min-height:calc(100vh - 65px)}.sidebar{background:#243449;color:#fff;padding:26px 16px}.sidebar-brand{padding:0 12px 24px;border-bottom:1px solid #ffffff24;margin-bottom:20px}.sidebar-brand strong{display:block;font-size:17px}.sidebar-brand span{font-size:12px;color:#aebdd0}.sidebar-label{margin:18px 12px 8px;font-size:10px;letter-spacing:1.3px;font-weight:800;color:#94a6bb;text-transform:uppercase}.sidebar nav{display:grid;gap:5px}.sidebar nav a{display:flex;gap:12px;align-items:center;padding:11px 12px;border-radius:9px;color:#c3cedb;text-decoration:none;font-size:14px;font-weight:700}.sidebar nav a:hover,.sidebar nav a.active{background:#ffffff16;color:#fff}.nav-icon{width:20px;text-align:center}.dashboard-main{min-width:0;padding:26px clamp(18px,4vw,48px) 60px;overflow:auto}.admin-topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 22px}.admin-topbar h1{font-size:23px;margin:0}.admin-topbar p{margin:4px 0 0;color:var(--muted);font-size:13px}.admin-view{display:none}.admin-view.active{display:block}.admin-view>.panel{margin:0!important}.admin-view #editor{display:block}.admin-view #editor>.section-links,.admin-view #productsPanel>.section-links{display:none}
 .order-row{display:grid;gap:12px;padding:16px;border:1px solid var(--line);border-radius:12px;background:#fff}.order-row p{margin:4px 0;line-height:1.5}.order-actions,.order-filters{display:flex;gap:10px;align-items:end;flex-wrap:wrap}.order-actions input,.order-filters input,.order-filters select{min-height:40px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font:inherit}.order-filters label{display:grid;gap:5px;font-size:12px;font-weight:700}.order-filters button{min-height:40px}.shipping-preview{padding:14px;border-radius:10px;background:var(--accent-soft);color:var(--accent-dark);font-weight:700}
 .photo-picker{background:#F8FAFF;border:1px dashed #94A3B8;border-radius:12px;padding:16px}.photo-picker input{background:#fff}.photo-help{margin:8px 0 0;color:var(--muted);font-size:13px}.photo-thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.photo-thumbs img{width:76px;height:64px;object-fit:cover;border-radius:7px;border:1px solid var(--line)}
 .social-list{display:grid;gap:10px;margin:16px 0}.social-row{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:14px;border:1px solid var(--line);border-radius:12px}.social-row p{margin:5px 0;color:var(--muted);font-size:14px;line-height:1.5}.social-row video{width:72px;max-height:128px;object-fit:cover;border-radius:8px;background:#111}.social-actions{display:flex;gap:8px;flex-wrap:wrap}.social-actions button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 11px;font:inherit;font-weight:700;cursor:pointer}.social-actions button:hover{border-color:var(--accent);color:var(--accent)}.admin .field input[type=file]{padding:10px}
 @media(max-width:600px){.social-row{align-items:flex-start;flex-direction:column}.social-row video{width:100%;max-width:160px}}
+@media(max-width:760px){.dashboard-layout{grid-template-columns:1fr}.sidebar{padding:14px}.sidebar-brand{padding:0 8px 12px;margin-bottom:12px}.sidebar nav{display:flex;overflow:auto}.sidebar-label{display:none}.sidebar nav a{white-space:nowrap;padding:9px 11px}.dashboard-main{padding:20px 14px 40px}.topline{padding:14px 16px}.admin-topbar{align-items:flex-start}}
 </style>
 </head>
 <body>
 <main class="admin">
-  <div class="topline"><a href="/">← Back to website</a><button id="logout" class="btn line" type="button" hidden>Log out</button></div>
+  <div class="topline"><a href="/">← Back to website</a></div>
   <section class="panel" id="loginPanel">
     <h1>Admin login</h1><p class="hint">Login with the shop owner or manager account to edit the homepage banner.</p>
     <form id="loginForm">
@@ -29,6 +31,9 @@ body{background:#F5F7FB}.admin{max-width:1000px;margin:36px auto 64px;padding:0 
     </form>
   </section>
 
+  <div class="dashboard" id="dashboard">
+  <header class="topline"><a href="/">← Back to website</a><button id="logout" class="btn line" type="button" hidden>Log out</button></header>
+  <div class="dashboard-layout"><aside class="sidebar" id="admin-sidebar"><div class="sidebar-brand"><strong>Vansh Computer</strong><span>Store administration</span></div><div class="sidebar-label">Manage store</div><nav aria-label="Admin sections"><a href="#banners" data-view="banners"><span class="nav-icon">▧</span>Banners</a><a href="#stories" data-view="stories" data-owner-only><span class="nav-icon">☆</span>Reviews &amp; Reels</a><a href="#products" data-view="products"><span class="nav-icon">▦</span>Products</a><a href="#shipping" data-view="shipping" data-owner-only><span class="nav-icon">⌁</span>Shipping</a><a href="#orders" data-view="orders" data-owner-only><span class="nav-icon">▤</span>Orders</a></nav></aside><main class="dashboard-main" id="admin-main"><div class="admin-topbar"><div><h1 id="viewTitle">Banners</h1><p>Manage your Vansh Computer storefront</p></div></div><div class="admin-view active" data-panel="banners">
   <section class="panel" id="editor">
     <div class="section-links"><a href="#editor">Homepage banner</a><a href="#shopBannerForm">Shop offer banner</a><a href="#socialContent">Reviews &amp; Reels</a><a href="#productsPanel">Products</a><a href="#shippingPanel">Shipping Settings</a><a href="#ordersPanel">Orders</a></div>
     <h1>Homepage banner</h1><p class="hint">Update the banner text and optional image. “Shop Now” and “Get a Callback” stay on the banner automatically.</p>
@@ -51,7 +56,7 @@ body{background:#F5F7FB}.admin{max-width:1000px;margin:36px auto 64px;padding:0 
       <div class="actions"><button class="btn" id="saveShopBanner" type="submit">Save shop banner</button><p class="status" id="shopBannerStatus" role="status"></p></div>
     </form>
     <hr style="border:0;border-top:1px solid var(--line);margin:36px 0">
-    <section id="socialContent">
+    </section></div><div class="admin-view" data-panel="stories"><section class="panel" id="socialContent">
       <h2>Customer stories and reviews</h2><p class="hint">Add Instagram Reel previews and review customer submissions before they appear publicly.</p>
       <form id="reelForm">
         <div class="field"><label for="reelUrl">Instagram Reel URL</label><input id="reelUrl" type="url" placeholder="https://www.instagram.com/reel/.../" required maxlength="500"></div>
@@ -61,9 +66,8 @@ body{background:#F5F7FB}.admin{max-width:1000px;margin:36px auto 64px;padding:0 
       </form>
       <h3 style="margin-top:28px">Homepage Reels</h3><div class="social-list" id="adminReels"><p class="hint">Loading Reels...</p></div>
       <h3 style="margin-top:28px">Review moderation</h3><div class="social-list" id="adminReviews"><p class="hint">Loading reviews...</p></div>
-    </section>
+    </section></div><div class="admin-view" data-panel="shipping"><section class="panel" id="shippingPanel">
     <hr style="border:0;border-top:1px solid var(--line);margin:36px 0">
-    <section id="shippingPanel">
       <h2>Shipping Settings</h2><p class="hint">Configure Maharashtra delivery charges and the free-delivery offer. Prices are calculated by the server and saved with each order.</p>
       <form id="shippingForm">
         <div class="product-form">
@@ -79,9 +83,8 @@ body{background:#F5F7FB}.admin{max-width:1000px;margin:36px auto 64px;padding:0 
         <div class="shipping-preview" id="shippingPreview" aria-live="polite"></div>
         <div class="actions"><button class="btn" type="submit">Save shipping settings</button><p class="status" id="shippingStatus" role="status"></p></div>
       </form>
-    </section>
+    </section></div><div class="admin-view" data-panel="orders"><section class="panel" id="ordersPanel">
     <hr style="border:0;border-top:1px solid var(--line);margin:36px 0">
-    <section id="ordersPanel">
       <h2>Orders</h2><p class="hint">Review guest orders, verified payment status, and courier tracking. Payment status is confirmed only by verified Razorpay webhooks.</p>
       <form class="order-filters" id="orderFilters">
         <label>Order number<input id="orderSearch" maxlength="24"></label>
@@ -90,9 +93,7 @@ body{background:#F5F7FB}.admin{max-width:1000px;margin:36px auto 64px;padding:0 
         <button class="btn" type="submit">Search orders</button>
       </form>
       <div class="admin-list" id="adminOrders"><p class="hint">Loading orders...</p></div>
-    </section>
-  </section>
-  <section class="panel" id="productsPanel" style="display:none;margin-top:22px">
+    </section></div><div class="admin-view" data-panel="products"><section class="panel" id="productsPanel" style="display:none;margin-top:22px">
     <div class="section-links"><a href="#editor">Banners</a><a href="#productsPanel">Products</a></div>
     <h1>Products</h1><p class="hint">Product photo optional hai. Laptop ki detailed specs bharo; accessories ke liye unke lagu fields hi bharo. Homepage par dikhane ke liye checkbox select karo.</p>
     <form id="productForm">
@@ -126,7 +127,7 @@ body{background:#F5F7FB}.admin{max-width:1000px;margin:36px auto 64px;padding:0 
       <div class="actions"><button class="btn" id="saveProduct" type="submit">Add new product</button><button class="btn line" id="cancelEdit" type="button" hidden>Cancel edit</button><p class="status" id="productStatus" role="status"></p></div>
     </form>
     <h2 style="margin-top:32px">Current products</h2><div class="admin-list" id="adminProducts"><p class="hint">Loading products...</p></div>
-  </section>
+  </section></div></main></div></div>
 </main>
 <script>
 const $ = (id) => document.getElementById(id);
@@ -253,8 +254,11 @@ async function loadOrders() {
 }
 async function openEditor(user) {
   if (!['owner', 'manager', 'inventory'].includes(user.role)) throw new Error('Products ke liye owner, manager, ya inventory account chahiye.');
-  $('loginPanel').style.display = 'none'; $('productsPanel').style.display = 'block'; $('logout').hidden = false;
-  if (['owner', 'manager'].includes(user.role)) {
+  $('loginPanel').style.display = 'none'; $('dashboard').style.display = 'block'; $('productsPanel').style.display = 'block'; $('logout').hidden = false;
+  const owner = ['owner', 'manager'].includes(user.role);
+  document.querySelectorAll('[data-owner-only]').forEach(link => { link.hidden = !owner; });
+  if (!owner) switchAdminView('products'); else switchAdminView('banners');
+  if (owner) {
     $('editor').style.display = 'block';
     await loadBanner();
     await loadSocialContent();
@@ -262,6 +266,14 @@ async function openEditor(user) {
   } else $('editor').style.display = 'none';
   await loadProducts();
 }
+const adminViewTitles = { banners: 'Banners', stories: 'Reviews & Reels', products: 'Products', shipping: 'Shipping settings', orders: 'Orders' };
+function switchAdminView(name) {
+  document.querySelectorAll('.admin-view').forEach(view => view.classList.toggle('active', view.dataset.panel === name));
+  document.querySelectorAll('.sidebar nav a').forEach(link => link.classList.toggle('active', link.dataset.view === name));
+  $('viewTitle').textContent = adminViewTitles[name] || 'Store administration';
+  if (location.hash !== '#' + name) history.replaceState(null, '', '#' + name);
+}
+document.querySelectorAll('.sidebar nav a').forEach(link => link.addEventListener('click', event => { event.preventDefault(); switchAdminView(link.dataset.view); }));
 $('loginForm').addEventListener('submit', async (event) => {
   event.preventDefault(); const status = $('loginStatus'); clearStatus(status);
   try {
