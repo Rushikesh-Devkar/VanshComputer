@@ -26,6 +26,7 @@ const productSchema = new mongoose.Schema({
   },
   storageGb: { type: Number, min: 0, index: true },
   price: { type: Number, required: true, min: 1 },
+  originalPrice: { type: Number, min: 1, default: null },
   description: { type: String, trim: true, maxlength: 3000, default: '' },
   featuredOnHome: { type: Boolean, default: false, index: true },
   stock: { type: Number, default: 1, min: 0 },       // refurbished = 1

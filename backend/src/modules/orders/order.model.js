@@ -10,6 +10,7 @@ const orderItemSchema = new mongoose.Schema({
   warrantyMonths: { type: Number, default: 0 },
   quantity: { type: Number, required: true, min: 1 },
   unitPrice: { type: Number, required: true, min: 0 },
+  originalPrice: { type: Number, min: 1, default: null },
   lineTotal: { type: Number, required: true, min: 0 },
   imageUrl: { type: String, default: '' },
 }, { _id: false });
@@ -32,6 +33,7 @@ const auditSchema = new mongoose.Schema({
 
 const orderSchema = new mongoose.Schema({
   orderNumber: { type: String, required: true, unique: true, index: true },
+  checkoutRequestId: { type: String, unique: true, sparse: true, select: false },
   customer: {
     name: { type: String, required: true },
     phone: { type: String, required: true, index: true },
@@ -52,6 +54,7 @@ const orderSchema = new mongoose.Schema({
   paymentStatus: { type: String, enum: ['created', 'authorized', 'captured', 'failed', 'expired', 'refund_pending', 'refund_review', 'refunded', 'refund_failed'], default: 'created', index: true },
   paymentProvider: { type: String, default: 'razorpay' },
   razorpayOrderId: { type: String, sparse: true, unique: true },
+  accessTokenHash: { type: String, select: false },
   razorpayPaymentId: { type: String, default: '' },
   razorpayRefundId: { type: String, default: '' },
   refundRequestedAt: { type: Date, default: null },

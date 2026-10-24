@@ -12,7 +12,9 @@
   "author": "",
   "license": "ISC",
   "type": "commonjs",
-  "engines": { "node": ">=20.19.0" },
+  "engines": {
+    "node": ">=20.19.0"
+  },
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "cloudinary": "^2.11.0",
@@ -25,6 +27,7 @@
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.11.2",
     "multer": "^2.4.0",
+    "razorpay": "^2.9.8",
     "zod": "^4.6.7"
   },
   "devDependencies": {

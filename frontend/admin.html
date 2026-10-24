@@ -11,12 +11,12 @@ body{background:#F3F6FA}.admin{max-width:none;margin:0;padding:0}.panel{backgrou
 .admin h1{margin:0 0 8px}.hint{color:var(--muted);line-height:1.6;margin:0 0 24px}.field{display:grid;gap:7px;margin:18px 0}.field label{font-weight:700;font-size:14px}.field input,.field textarea{width:100%;border:1px solid #d5dbe7;border-radius:10px;padding:12px;font:inherit}.field textarea{min-height:110px;resize:vertical}.field input[type=file]{background:#fff}.preview{overflow:hidden;border-radius:14px;min-height:240px;padding:30px;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(220px,.9fr);gap:24px;align-items:center;background:linear-gradient(115deg,#0F172A,#172554 60%,#2563EB);color:#fff;margin:22px 0}.preview.no-image{grid-template-columns:1fr}.preview-content{min-width:0}.preview small{color:#BFDBFE;font-weight:700;letter-spacing:1px}.preview h2{font-size:clamp(28px,5vw,44px);line-height:1.08;white-space:pre-line;margin:10px 0}.preview p{white-space:pre-line;color:#E2E8F0}.preview img{width:100%;max-height:280px;object-fit:contain;border-radius:12px}.preview img[hidden]{display:none}.actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.status{min-height:24px;color:#166534;font-weight:600}.status.error{color:#b91c1c}.topline{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:18px}.topline a{color:var(--accent);font-weight:700}#editor{display:none}
 @media(max-width:700px){.preview{grid-template-columns:1fr}.preview.no-image{grid-template-columns:1fr}.preview img{max-height:220px}}
 .product-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:0 18px}.product-form .wide{grid-column:1/-1}.admin-list{display:grid;gap:10px;margin-top:18px}.admin-product{display:flex;justify-content:space-between;gap:12px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:12px}.admin-product-actions{display:flex;gap:8px}.admin-product button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 12px;cursor:pointer}.section-links{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}.section-links a{background:#fff;border:1px solid var(--line);padding:9px 12px;border-radius:9px;font-weight:700;color:var(--accent)}
-.topline{padding:18px 28px;margin:0;background:#fff;border-bottom:1px solid #e5eaf2}.dashboard{display:none;min-height:100vh}.dashboard-layout{display:grid;grid-template-columns:248px minmax(0,1fr);min-height:calc(100vh - 65px)}.sidebar{background:#243449;color:#fff;padding:26px 16px}.sidebar-brand{padding:0 12px 24px;border-bottom:1px solid #ffffff24;margin-bottom:20px}.sidebar-brand strong{display:block;font-size:17px}.sidebar-brand span{font-size:12px;color:#aebdd0}.sidebar-label{margin:18px 12px 8px;font-size:10px;letter-spacing:1.3px;font-weight:800;color:#94a6bb;text-transform:uppercase}.sidebar nav{display:grid;gap:5px}.sidebar nav a{display:flex;gap:12px;align-items:center;padding:11px 12px;border-radius:9px;color:#c3cedb;text-decoration:none;font-size:14px;font-weight:700}.sidebar nav a:hover,.sidebar nav a.active{background:#ffffff16;color:#fff}.nav-icon{width:20px;text-align:center}.dashboard-main{min-width:0;padding:26px clamp(18px,4vw,48px) 60px;overflow:auto}.admin-topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 22px}.admin-topbar h1{font-size:23px;margin:0}.admin-topbar p{margin:4px 0 0;color:var(--muted);font-size:13px}.admin-view{display:none}.admin-view.active{display:block}.admin-view>.panel{margin:0!important}.admin-view #editor{display:block}.admin-view #editor>.section-links,.admin-view #productsPanel>.section-links{display:none}
-.order-row{display:grid;gap:12px;padding:16px;border:1px solid var(--line);border-radius:12px;background:#fff}.order-row p{margin:4px 0;line-height:1.5}.order-actions,.order-filters{display:flex;gap:10px;align-items:end;flex-wrap:wrap}.order-actions input,.order-filters input,.order-filters select{min-height:40px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font:inherit}.order-filters label{display:grid;gap:5px;font-size:12px;font-weight:700}.order-filters button{min-height:40px}.shipping-preview{padding:14px;border-radius:10px;background:var(--accent-soft);color:var(--accent-dark);font-weight:700}
+.dashboard{display:none;height:100vh;flex-direction:column;overflow:hidden}.dashboard[style*="display: block"]{display:flex!important}body:has(#dashboard[style*="display: block"]){overflow:hidden}body:has(#dashboard[style*="display: block"])>.admin>.topline{display:none}.admin-topbar{position:sticky;top:0;z-index:30;height:64px;min-height:64px;flex:none;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:12px;padding:0 24px;background:#fff;border-bottom:1px solid #e5eaf2}.admin-brand{display:flex;align-items:center;gap:10px;min-width:0;font-weight:800;color:#243449}.admin-brand img{width:38px;height:38px;object-fit:contain;border-radius:8px}.admin-topbar h1{font-size:18px;line-height:1.2;margin:0;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.admin-topbar #logout{justify-self:end}.dashboard-layout{flex:1;min-height:0;display:flex}.sidebar{flex:0 0 248px;width:248px;height:100%;min-height:0;overflow-y:auto;overscroll-behavior:contain;background:#1f2d40;color:#fff;padding:26px 16px}.sidebar-brand{display:flex;flex-direction:column;align-items:center;gap:10px;padding:0 12px 24px;border-bottom:1px solid #ffffff24;margin-bottom:20px;text-align:center}.sidebar-brand img{width:72px;height:72px;object-fit:contain;border-radius:14px;background:#fff;padding:5px}.sidebar-brand strong{display:block;font-size:17px}.sidebar-brand span{font-size:12px;color:#aebdd0}.sidebar-label{margin:18px 12px 8px;font-size:10px;letter-spacing:1.3px;font-weight:800;color:#94a6bb;text-transform:uppercase}.sidebar nav{display:grid;gap:5px}.sidebar nav a{display:flex;gap:12px;align-items:center;padding:11px 12px;border-radius:9px;color:#c3cedb;text-decoration:none;font-size:14px;font-weight:700}.sidebar nav a:hover,.sidebar nav a.active{background:#ffffff16;color:#fff}.nav-icon{width:20px;text-align:center}.dashboard-main{flex:1;min-width:0;min-height:0;margin-left:0;padding:26px clamp(18px,4vw,48px) 60px;overflow-y:auto;overscroll-behavior:contain}.admin-view{display:none}.admin-view.active{display:block}.admin-view>.panel{margin:0!important}.admin-view #editor{display:block}.admin-view #editor>.section-links,.admin-view #productsPanel>.section-links{display:none}
+.order-row{display:grid;gap:16px;padding:18px;border:1px solid var(--line);border-radius:14px;background:#fff;box-shadow:0 3px 12px rgba(15,23,42,.04)}.order-summary{display:grid;gap:16px;min-width:0}.order-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;padding-bottom:14px;border-bottom:1px solid var(--line)}.order-heading-main{display:grid;gap:7px;min-width:0}.order-number{font-size:16px;overflow-wrap:anywhere}.order-time{color:var(--muted);font-size:13px}.order-badges{display:flex;gap:6px;flex-wrap:wrap}.order-badge{display:inline-flex;padding:4px 9px;border-radius:99px;background:#eef2ff;color:#334155;font-size:11px;font-weight:800;text-transform:capitalize}.order-sections{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.order-section{min-width:0;padding:13px;border:1px solid #edf0f5;border-radius:11px;background:#fff}.order-section h3{margin:0 0 8px;color:#64748b;font-size:11px;letter-spacing:.07em;text-transform:uppercase}.order-section p{margin:4px 0;color:#334155;font-size:13px;line-height:1.55;overflow-wrap:anywhere}.order-products{display:grid;gap:10px}.order-product{display:grid;grid-template-columns:68px minmax(0,1fr);gap:12px;align-items:center}.order-product+.order-product{padding-top:10px;border-top:1px solid #edf0f5}.order-product img,.order-product-placeholder{width:68px;height:68px;border-radius:9px;background:#f1f5f9;object-fit:contain}.order-product-placeholder{display:grid;place-items:center;color:#94a3b8;font-size:11px}.order-product-name{display:block;color:#172033;font-size:14px}.order-product-meta{margin-top:4px;color:#64748b;font-size:12px;line-height:1.5}.order-price-line{display:flex;gap:12px;flex-wrap:wrap;margin-top:6px;font-size:12px}.order-price-line strong{color:#166534}.order-totals{display:grid;gap:6px}.order-total{display:flex;justify-content:space-between;gap:12px;color:#475569;font-size:13px}.order-total.grand{padding-top:8px;border-top:1px solid var(--line);color:#172033;font-size:15px;font-weight:800}.order-actions,.order-filters{display:flex;gap:10px;align-items:end;flex-wrap:wrap}.order-actions input,.order-filters input,.order-filters select{min-height:40px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font:inherit}.order-filters label{display:grid;gap:5px;font-size:12px;font-weight:700}.order-filters button{min-height:40px}.shipping-preview{padding:14px;border-radius:10px;background:var(--accent-soft);color:var(--accent-dark);font-weight:700}@media(max-width:640px){.order-sections{grid-template-columns:1fr}.order-row{padding:14px}.order-product{grid-template-columns:56px minmax(0,1fr)}.order-product img,.order-product-placeholder{width:56px;height:56px}}
 .photo-picker{background:#F8FAFF;border:1px dashed #94A3B8;border-radius:12px;padding:16px}.photo-picker input{background:#fff}.photo-help{margin:8px 0 0;color:var(--muted);font-size:13px}.photo-thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.photo-thumbs img{width:76px;height:64px;object-fit:cover;border-radius:7px;border:1px solid var(--line)}
 .social-list{display:grid;gap:10px;margin:16px 0}.social-row{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:14px;border:1px solid var(--line);border-radius:12px}.social-row p{margin:5px 0;color:var(--muted);font-size:14px;line-height:1.5}.social-row video{width:72px;max-height:128px;object-fit:cover;border-radius:8px;background:#111}.social-actions{display:flex;gap:8px;flex-wrap:wrap}.social-actions button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 11px;font:inherit;font-weight:700;cursor:pointer}.social-actions button:hover{border-color:var(--accent);color:var(--accent)}.admin .field input[type=file]{padding:10px}
 @media(max-width:600px){.social-row{align-items:flex-start;flex-direction:column}.social-row video{width:100%;max-width:160px}}
-@media(max-width:760px){.dashboard-layout{grid-template-columns:1fr}.sidebar{padding:14px}.sidebar-brand{padding:0 8px 12px;margin-bottom:12px}.sidebar nav{display:flex;overflow:auto}.sidebar-label{display:none}.sidebar nav a{white-space:nowrap;padding:9px 11px}.dashboard-main{padding:20px 14px 40px}.topline{padding:14px 16px}.admin-topbar{align-items:flex-start}}
+@media(max-width:760px){.admin-topbar{grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:8px;padding:0 12px}.admin-brand{font-size:11px;gap:6px}.admin-brand span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.admin-brand img{width:28px;height:28px}.admin-topbar h1{font-size:14px}.admin-topbar #logout{padding:8px 9px;font-size:12px;white-space:nowrap}.dashboard-layout{flex-direction:column}.sidebar{flex:0 0 auto;width:100%;height:auto;overflow-x:auto;overflow-y:hidden;padding:10px 12px;overscroll-behavior:contain}.sidebar-brand{display:none}.sidebar-label{display:none}.sidebar nav{display:flex;gap:5px;overflow-x:auto;overscroll-behavior:contain}.sidebar nav a{flex:none;white-space:nowrap;padding:9px 11px}.dashboard-main{flex:1;min-height:0;overflow-y:auto;padding:20px 14px 40px}}
 </style>
 </head>
 <body>
@@ -32,8 +32,8 @@ body{background:#F3F6FA}.admin{max-width:none;margin:0;padding:0}.panel{backgrou
   </section>
 
   <div class="dashboard" id="dashboard">
-  <header class="topline"><a href="/">← Back to website</a><button id="logout" class="btn line" type="button" hidden>Log out</button></header>
-  <div class="dashboard-layout"><aside class="sidebar" id="admin-sidebar"><div class="sidebar-brand"><strong>Vansh Computer</strong><span>Store administration</span></div><div class="sidebar-label">Manage store</div><nav aria-label="Admin sections"><a href="#banners" data-view="banners"><span class="nav-icon">▧</span>Banners</a><a href="#stories" data-view="stories" data-owner-only><span class="nav-icon">☆</span>Reviews &amp; Reels</a><a href="#products" data-view="products"><span class="nav-icon">▦</span>Products</a><a href="#shipping" data-view="shipping" data-owner-only><span class="nav-icon">⌁</span>Shipping</a><a href="#orders" data-view="orders" data-owner-only><span class="nav-icon">▤</span>Orders</a></nav></aside><main class="dashboard-main" id="admin-main"><div class="admin-topbar"><div><h1 id="viewTitle">Banners</h1><p>Manage your Vansh Computer storefront</p></div></div><div class="admin-view active" data-panel="banners">
+  <div class="admin-topbar"><div class="admin-brand"><img src="img/logo.jpg" alt=""><span>Vansh Computer Admin</span></div><h1 id="viewTitle">Banners</h1><button id="logout" class="btn line" type="button" hidden>Log out</button></div>
+  <div class="dashboard-layout"><aside class="sidebar" id="admin-sidebar"><div class="sidebar-brand"><img src="img/logo.jpg" alt="Vansh Computer logo"><strong>Vansh Computer</strong><span>Store administration</span></div><div class="sidebar-label">Manage store</div><nav aria-label="Admin sections"><a href="#banners" data-view="banners"><span class="nav-icon">▧</span>Banners</a><a href="#stories" data-view="stories" data-owner-only><span class="nav-icon">☆</span>Reviews &amp; Reels</a><a href="#products" data-view="products"><span class="nav-icon">▦</span>Products</a><a href="#shipping" data-view="shipping" data-owner-only><span class="nav-icon">⌁</span>Shipping</a><a href="#orders" data-view="orders" data-owner-only><span class="nav-icon">▤</span>Orders</a></nav></aside><div class="dashboard-main" id="admin-main"><div class="admin-view active" data-panel="banners">
   <section class="panel" id="editor">
     <div class="section-links"><a href="#editor">Homepage banner</a><a href="#shopBannerForm">Shop offer banner</a><a href="#socialContent">Reviews &amp; Reels</a><a href="#productsPanel">Products</a><a href="#shippingPanel">Shipping Settings</a><a href="#ordersPanel">Orders</a></div>
     <h1>Homepage banner</h1><p class="hint">Update the banner text and optional image. “Shop Now” and “Get a Callback” stay on the banner automatically.</p>
@@ -68,11 +68,11 @@ body{background:#F3F6FA}.admin{max-width:none;margin:0;padding:0}.panel{backgrou
       <h3 style="margin-top:28px">Review moderation</h3><div class="social-list" id="adminReviews"><p class="hint">Loading reviews...</p></div>
     </section></div><div class="admin-view" data-panel="shipping"><section class="panel" id="shippingPanel">
     <hr style="border:0;border-top:1px solid var(--line);margin:36px 0">
-      <h2>Shipping Settings</h2><p class="hint">Configure Maharashtra delivery charges and the free-delivery offer. Prices are calculated by the server and saved with each order.</p>
+      <h2>Shipping Settings</h2><p class="hint">Delivery rates are calculated from each product category. Set a minimum order or end date to scope an optional free-delivery offer.</p>
       <form id="shippingForm">
         <div class="product-form">
-          <div class="field"><label for="shippingCharge">Maharashtra delivery charge (₹)</label><input id="shippingCharge" type="number" min="0" step="1" placeholder="Set courier charge"></div>
-          <div class="field"><label style="font-weight:500"><input id="freeDeliveryEnabled" type="checkbox" checked> Free delivery offer ON</label></div>
+          <div class="field wide"><strong>Per-unit delivery rates</strong><span class="hint">Laptop ₹550 · Computer setup / PC ₹850 · Accessories ₹150</span></div>
+          <div class="field"><label style="font-weight:500"><input id="freeDeliveryEnabled" type="checkbox"> Free delivery offer ON</label></div>
           <div class="field"><label for="freeDeliveryMinimum">Free delivery minimum order (₹, optional)</label><input id="freeDeliveryMinimum" type="number" min="0" step="1" placeholder="No minimum"></div>
           <div class="field"><label for="freeDeliveryEndsAt">Offer end date (optional)</label><input id="freeDeliveryEndsAt" type="datetime-local"></div>
           <div class="field wide"><label for="returnPolicyText">Return policy text (optional)</label><textarea id="returnPolicyText" maxlength="2000" placeholder="Leave blank until the business policy is confirmed."></textarea></div>
@@ -107,7 +107,8 @@ body{background:#F3F6FA}.admin{max-width:none;margin:0;padding:0}.panel{backgrou
         <div class="field"><label for="pType">Condition *</label><select id="pType"><option value="new">New</option><option value="refurbished">Refurbished</option></select></div>
         <div class="field"><label for="pSku">SKU / stock code *</label><input id="pSku" required maxlength="100"></div>
         <div class="field"><label for="pHsn">HSN code (optional)</label><input id="pHsn" maxlength="8" inputmode="numeric"></div>
-        <div class="field"><label for="pPrice">Price (₹) *</label><input id="pPrice" type="number" min="1" required></div>
+        <div class="field"><label for="pPrice">Selling price (₹) *</label><input id="pPrice" type="number" min="1" required></div>
+        <div class="field"><label for="pOriginalPrice">Original price (₹, optional)</label><input id="pOriginalPrice" type="number" min="1" placeholder="Before discount"></div>
         <div class="field"><label for="pStock">Quantity in stock</label><input id="pStock" type="number" min="0" value="1"></div>
         <div class="field"><label for="pWarranty">Warranty (months)</label><input id="pWarranty" type="number" min="0" value="6"></div>
         <div class="field"><label for="pCpu">Processor / chipset</label><input id="pCpu" placeholder="Intel Core i5-1245U"></div>
@@ -127,7 +128,7 @@ body{background:#F3F6FA}.admin{max-width:none;margin:0;padding:0}.panel{backgrou
       <div class="actions"><button class="btn" id="saveProduct" type="submit">Add new product</button><button class="btn line" id="cancelEdit" type="button" hidden>Cancel edit</button><p class="status" id="productStatus" role="status"></p></div>
     </form>
     <h2 style="margin-top:32px">Current products</h2><div class="admin-list" id="adminProducts"><p class="hint">Loading products...</p></div>
-  </section></div></main></div></div>
+  </section></div></div></div></div>
 </main>
 <script>
 const $ = (id) => document.getElementById(id);
@@ -187,21 +188,19 @@ async function loadBanner() { setPreview(await request('/api/banner')); }
 function updateShippingPreview() {
   const enabled = $('freeDeliveryEnabled').checked;
   const minimum = $('freeDeliveryMinimum').value;
-  const charge = $('shippingCharge').value;
   const end = $('freeDeliveryEndsAt').value;
   const expired = end && new Date(end) < new Date();
   const expiry = end ? ` until ${new Date(end).toLocaleString()}` : '';
-  const paidShipping = charge ? `Other orders use ₹${Number(charge).toLocaleString('en-IN')} delivery.` : 'Set a delivery charge for orders outside the offer.';
-  $('shippingPreview').textContent = enabled && expired
-    ? `The free-delivery offer has expired. ${charge ? `Maharashtra delivery charge is ₹${Number(charge).toLocaleString('en-IN')}.` : 'Set a Maharashtra delivery charge before accepting orders.'}`
+  const scope = minimum || end;
+  $('shippingPreview').textContent = enabled && (expired || !scope)
+    ? expired ? 'The free-delivery offer has expired. Standard category rates apply.' : 'Add a minimum order or end date to scope the free-delivery offer. Standard category rates apply until scoped.'
     : enabled
-    ? minimum || end ? `Free delivery on Maharashtra orders of ₹${Number(minimum || 0).toLocaleString('en-IN')} or more${expiry}. ${paidShipping}` : 'Free delivery applies to all Maharashtra orders with no end date.'
-    : charge ? `Free delivery is OFF. Maharashtra delivery charge: ₹${Number(charge).toLocaleString('en-IN')}.` : 'Free delivery is OFF. Set the Maharashtra courier charge before accepting orders.';
+    ? `Free delivery on Maharashtra orders of ₹${Number(minimum || 0).toLocaleString('en-IN')} or more${expiry}. Otherwise: laptop ₹550, computer setup / PC ₹850, accessories ₹150 per unit.`
+    : 'Standard rates apply per unit: laptop ₹550, computer setup / PC ₹850, accessories ₹150.';
 }
 async function loadShippingSettings() {
   const settings = await request('/api/orders/shipping');
-  $('shippingCharge').value = settings.maharashtraCharge ?? '';
-  $('freeDeliveryEnabled').checked = settings.freeDeliveryEnabled !== false;
+  $('freeDeliveryEnabled').checked = settings.freeDeliveryEnabled === true;
   $('freeDeliveryMinimum').value = settings.freeDeliveryMinimum ?? '';
   $('freeDeliveryEndsAt').value = settings.freeDeliveryEndsAt ? new Date(settings.freeDeliveryEndsAt).toISOString().slice(0, 16) : '';
   $('returnPolicyText').value = settings.returnPolicyText || '';
@@ -221,15 +220,35 @@ async function loadOrders() {
     if (!orders.length) { container.replaceChildren(Object.assign(document.createElement('p'), { className: 'hint', textContent: 'No orders match these filters.' })); return; }
     container.replaceChildren(...orders.map((order) => {
       const row = document.createElement('article'); row.className = 'order-row';
-      const summary = document.createElement('div');
-      const title = document.createElement('b'); title.textContent = `${order.orderNumber} · ${order.status.replaceAll('_', ' ')} · ${order.paymentStatus.replaceAll('_', ' ')}`;
-      const customer = document.createElement('p'); customer.textContent = `${order.customer.name} · ${order.customer.phone}${order.customer.email ? ' · ' + order.customer.email : ''}`;
-      const address = document.createElement('p'); address.textContent = `${order.address.line1}${order.address.line2 ? ', ' + order.address.line2 : ''}, ${order.address.city}, ${order.address.district}, Maharashtra ${order.address.pinCode}`;
-      const products = document.createElement('p'); products.textContent = order.items.map((item) => `${item.name} × ${item.quantity} · ₹${Number(item.lineTotal).toLocaleString('en-IN')} · ${item.warrantyMonths} month warranty`).join(' | ');
-      const totals = document.createElement('p'); totals.textContent = `Subtotal ₹${Number(order.subtotal).toLocaleString('en-IN')} · Discount ₹${Number(order.discount).toLocaleString('en-IN')} · Delivery ₹${Number(order.shippingCharge).toLocaleString('en-IN')} · Total ₹${Number(order.total).toLocaleString('en-IN')}`;
-      const paymentInfo = document.createElement('p'); paymentInfo.textContent = `Razorpay order: ${order.razorpayOrderId || 'not created'} · Payment: ${order.razorpayPaymentId || 'not captured'} · Refund: ${order.razorpayRefundId || 'none'}`;
-      const tracking = document.createElement('p'); tracking.textContent = `Courier: ${order.courierName || 'not entered'} · Tracking: ${order.trackingNumber || 'not entered'}`;
-      summary.append(title, customer, address, products, totals, paymentInfo, tracking); row.append(summary);
+      const money = (value) => `₹${Number(value || 0).toLocaleString('en-IN')}`;
+      const section = (heading) => { const el = document.createElement('section'); el.className = 'order-section'; const h = document.createElement('h3'); h.textContent = heading; el.append(h); return el; };
+      const summary = document.createElement('div'); summary.className = 'order-summary';
+      const heading = document.createElement('div'); heading.className = 'order-heading';
+      const headingMain = document.createElement('div'); headingMain.className = 'order-heading-main';
+      const number = document.createElement('strong'); number.className = 'order-number'; number.textContent = order.orderNumber;
+      const time = document.createElement('time'); time.className = 'order-time'; time.dateTime = order.createdAt || ''; time.textContent = order.createdAt ? new Date(order.createdAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : 'Order time unavailable';
+      headingMain.append(number, time);
+      const badges = document.createElement('div'); badges.className = 'order-badges';
+      [order.status, order.paymentStatus].forEach((value) => { const badge = document.createElement('span'); badge.className = 'order-badge'; badge.textContent = String(value || '').replaceAll('_', ' '); badges.append(badge); });
+      heading.append(headingMain, badges);
+      const sections = document.createElement('div'); sections.className = 'order-sections';
+      const customer = section('Customer'); const customerText = document.createElement('p'); customerText.textContent = `${order.customer.name} · ${order.customer.phone}${order.customer.email ? ' · ' + order.customer.email : ''}`; customer.append(customerText);
+      const address = section('Delivery address'); const addressText = document.createElement('p'); addressText.textContent = `${order.address.line1}${order.address.line2 ? ', ' + order.address.line2 : ''}, ${order.address.city}, ${order.address.district}, ${order.address.state || 'Maharashtra'} ${order.address.pinCode}`; address.append(addressText);
+      const products = section('Products'); const productList = document.createElement('div'); productList.className = 'order-products';
+      order.items.forEach((item) => {
+        const product = document.createElement('div'); product.className = 'order-product';
+        if (item.imageUrl) { const image = document.createElement('img'); image.src = item.imageUrl; image.alt = item.name; image.loading = 'lazy'; product.append(image); }
+        else { const placeholder = document.createElement('div'); placeholder.className = 'order-product-placeholder'; placeholder.textContent = 'No image'; product.append(placeholder); }
+        const details = document.createElement('div'); const name = document.createElement('strong'); name.className = 'order-product-name'; name.textContent = `${item.name} × ${item.quantity}`;
+        const meta = document.createElement('div'); meta.className = 'order-product-meta'; meta.textContent = `${item.type === 'refurbished' ? 'Refurbished' : 'New'} · ${item.warrantyMonths || 0} month warranty`;
+        const prices = document.createElement('div'); prices.className = 'order-price-line'; const unit = document.createElement('span'); unit.textContent = `Unit price ${money(item.unitPrice)}`; if (Number(item.originalPrice) > Number(item.unitPrice)) { const original = document.createElement('del'); original.className = 'original-price'; original.textContent = money(item.originalPrice); unit.append(' ', original); } const line = document.createElement('strong'); line.textContent = `Line total ${money(item.lineTotal)}`;
+        prices.append(unit, line); details.append(name, meta, prices); product.append(details); productList.append(product);
+      }); products.append(productList);
+      const totals = section('Order total'); const totalList = document.createElement('div'); totalList.className = 'order-totals';
+      [['Subtotal', order.subtotal], ['Discount', -Number(order.discount || 0)], ['Delivery', order.shippingCharge]].forEach(([label, amount]) => { const line = document.createElement('div'); line.className = 'order-total'; const key = document.createElement('span'); key.textContent = label; const value = document.createElement('span'); value.textContent = `${Number(amount) < 0 ? '−' : ''}${money(Math.abs(Number(amount) || 0))}`; line.append(key, value); totalList.append(line); });
+      const grand = document.createElement('div'); grand.className = 'order-total grand'; const grandLabel = document.createElement('span'); grandLabel.textContent = 'Order total'; const grandValue = document.createElement('span'); grandValue.textContent = money(order.total); grand.append(grandLabel, grandValue); totalList.append(grand); totals.append(totalList);
+      const payment = section('Payment & tracking'); [['Razorpay order', order.razorpayOrderId || 'Not created'], ['Payment ID', order.razorpayPaymentId || 'Not captured'], ['Refund ID', order.razorpayRefundId || 'None'], ['Courier', order.courierName || 'Not entered'], ['Tracking', order.trackingNumber || 'Not entered']].forEach(([label, value]) => { const p = document.createElement('p'); p.textContent = `${label}: ${value}`; payment.append(p); });
+      sections.append(customer, address, products, totals, payment); summary.append(heading, sections); row.append(summary);
       const actions = document.createElement('div'); actions.className = 'order-actions';
       const update = async (status, extra = {}) => { await request('/api/orders/admin/' + encodeURIComponent(order._id), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status, ...extra }) }); await loadOrders(); };
       const button = (label, action) => { const el = document.createElement('button'); el.type = 'button'; el.className = 'btn line'; el.textContent = label; el.addEventListener('click', () => action().catch((error) => alert(error.message))); actions.append(el); };
@@ -285,7 +304,6 @@ $('shippingForm').addEventListener('input', updateShippingPreview);
 $('shippingForm').addEventListener('submit', async (event) => {
   event.preventDefault(); const status = $('shippingStatus'); clearStatus(status);
   const payload = {
-    maharashtraCharge: $('shippingCharge').value === '' ? null : Number($('shippingCharge').value),
     freeDeliveryEnabled: $('freeDeliveryEnabled').checked,
     freeDeliveryMinimum: $('freeDeliveryMinimum').value === '' ? null : Number($('freeDeliveryMinimum').value),
     freeDeliveryEndsAt: $('freeDeliveryEndsAt').value ? new Date($('freeDeliveryEndsAt').value).toISOString() : null,
@@ -354,7 +372,7 @@ function editProduct(product) {
   $('photoHelp').textContent = `Already saved: ${currentImageCount} photo(s). Add photos to reach at least 5 total (maximum 8).`;
   const values = {
     pName: product.name, pBrand: product.brand, pSection: product.section || 'laptop', pCategory: product.category || 'laptop',
-    pSubcategory: product.subcategory || '', pType: product.type, pSku: product.sku, pHsn: product.hsnCode || '', pPrice: product.price,
+    pSubcategory: product.subcategory || '', pType: product.type, pSku: product.sku, pHsn: product.hsnCode || '', pPrice: product.price, pOriginalPrice: product.originalPrice ?? '',
     pStock: product.stock, pWarranty: product.warrantyMonths, pCpu: product.specs?.cpu || '', pRam: product.specs?.ram || '',
     pStorage: product.specs?.storage || '', pGpu: product.specs?.gpu || '', pScreen: product.specs?.screen || '', pOs: product.specs?.os || '',
     pGrade: product.refurbished?.grade || '', pBattery: product.refurbished?.batteryHealth ?? '', pCosmetic: product.refurbished?.cosmeticNotes || '',
@@ -375,7 +393,7 @@ async function loadProducts() {
     if (!items.length) { container.replaceChildren(Object.assign(document.createElement('p'), { className: 'hint', textContent: 'Abhi koi active product nahi hai.' })); return; }
     container.replaceChildren(...items.map((product) => {
       const row = document.createElement('div'); row.className = 'admin-product';
-      const info = document.createElement('span'); info.textContent = `${product.name} · ${product.brand} · ₹${Number(product.price).toLocaleString('en-IN')} · ${product.section === 'accessories' ? 'Accessories' : 'Laptops'}`;
+      const info = document.createElement('span'); info.textContent = `${product.name} · ${product.brand} · ₹${Number(product.price).toLocaleString('en-IN')}${Number(product.originalPrice) > Number(product.price) ? ` (was ₹${Number(product.originalPrice).toLocaleString('en-IN')}, ${Math.round((Number(product.originalPrice) - Number(product.price)) / Number(product.originalPrice) * 100)}% off)` : ''} · ${product.section === 'accessories' ? 'Accessories' : 'Laptops'}`;
       const actions = document.createElement('div'); actions.className = 'admin-product-actions';
       const edit = document.createElement('button'); edit.type = 'button'; edit.textContent = 'Edit'; edit.addEventListener('click', () => editProduct(product));
       const archive = document.createElement('button'); archive.type = 'button'; archive.textContent = 'Archive'; archive.addEventListener('click', async () => {
@@ -461,11 +479,14 @@ $('productForm').addEventListener('submit', async (event) => {
   if (selectedPhotos.length && currentImageCount + selectedPhotos.length < 5) {
     showError(status, 'Full gallery ke liye kam se kam 5 total photos chahiye. Ek saath aur photos select karein.'); button.disabled = false; return;
   }
+  if ($('pOriginalPrice').value !== '' && Number($('pOriginalPrice').value) < Number($('pPrice').value)) {
+    showError(status, 'Original price must be equal to or greater than the selling price.'); button.disabled = false; return;
+  }
   const grade = $('pGrade').value, battery = $('pBattery').value;
   const payload = {
     name: $('pName').value.trim(), brand: $('pBrand').value.trim(), section: $('pSection').value, category: $('pCategory').value,
     subcategory: $('pSubcategory').value.trim().toLowerCase(), type: $('pType').value, sku: $('pSku').value.trim(), hsnCode: $('pHsn').value.trim(),
-    price: Number($('pPrice').value), stock: Number($('pStock').value || 0), warrantyMonths: Number($('pWarranty').value || 0),
+    price: Number($('pPrice').value), originalPrice: $('pOriginalPrice').value === '' ? null : Number($('pOriginalPrice').value), stock: Number($('pStock').value || 0), warrantyMonths: Number($('pWarranty').value || 0),
     storageGb: (() => { const match = $('pStorage').value.match(/([\d.]+)\s*(tb|gb)/i); return match ? Math.round(Number(match[1]) * (/tb/i.test(match[2]) ? 1024 : 1)) : null; })(),
     specs: { cpu: $('pCpu').value.trim(), ram: $('pRam').value.trim(), storage: $('pStorage').value.trim(), gpu: $('pGpu').value.trim(), screen: $('pScreen').value.trim(), os: $('pOs').value.trim() },
     description: $('pDescription').value.trim(), featuredOnHome: $('pHome').checked,

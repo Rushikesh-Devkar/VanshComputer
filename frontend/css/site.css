@@ -70,6 +70,7 @@ h1{font-size:clamp(24px,4vw,34px);margin:28px 0 0}
 .btn[disabled]{opacity:.5;cursor:not-allowed}
 .badge{display:inline-block;font-size:12px;font-weight:700;padding:4px 10px;border-radius:99px;background:var(--accent);color:#fff;margin-right:6px}
 .badge.red,.badge.soft{background:var(--accent-soft);color:var(--accent-dark)}
+.badge.discount{background:#ef4444;color:#fff}
 .grid{display:grid;gap:24px;grid-template-columns:repeat(auto-fill,minmax(min(260px,100%),1fr))}
 @media(min-width:1200px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 .card{width:100%;max-width:100%;min-width:0;margin:0;border:1px solid #eee;border-radius:16px;overflow:hidden;background:#fff;display:flex;flex-direction:column;box-shadow:0 2px 4px rgba(0,0,0,.02);transition:transform .3s cubic-bezier(.4,0,.2,1),box-shadow .3s cubic-bezier(.4,0,.2,1),border-color .3s}
@@ -79,7 +80,17 @@ h1{font-size:clamp(24px,4vw,34px);margin:28px 0 0}
 .card .ph img{display:block;width:100%;height:100%;object-fit:contain}
 .card .bd{padding:16px;display:flex;flex-direction:column;gap:6px;flex:1}
 .price{font-size:1.5rem;font-weight:800;color:#059669;margin-top:auto}
+.price-container{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-top:auto}.price-container .price{margin-top:0}.original-price{color:#94a3b8;font-size:.9em;font-weight:500}
 .muted{color:var(--muted);font-size:14px;line-height:1.6}
+#grid{grid-template-columns:repeat(auto-fill,minmax(min(220px,100%),1fr));gap:20px}
+@media(min-width:1200px){#grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:600px){
+  #grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  #grid .card .bd{padding:11px;gap:5px}
+  #grid .card .price{font-size:1.15rem}
+  #grid .card .muted{font-size:12px;line-height:1.4}
+  #grid .card .badge{margin-right:4px;padding:3px 8px;font-size:10px}
+}
 .filters{display:flex;flex-wrap:wrap;gap:12px;margin:20px 0 24px}
 .filters select,.filters input,input.f{height:44px;padding:0 12px;border:1px solid #d5dbe7;border-radius:10px;font:inherit;font-size:14px;background:#fff}
 

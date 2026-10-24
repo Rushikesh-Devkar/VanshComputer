@@ -9,7 +9,11 @@ const service = require('./order.service');
 const reservationMinutes = () => Math.min(60, Math.max(5, Number(process.env.PAYMENT_RESERVATION_MINUTES) || 15));
 const gatewayReady = () => process.env.PAYMENT_MODE === 'test'
   && /^rzp_test_[A-Za-z0-9]+$/.test(process.env.RAZORPAY_KEY_ID || '')
-  && !!process.env.RAZORPAY_KEY_SECRET && !!process.env.RAZORPAY_WEBHOOK_SECRET;
+  && !!process.env.RAZORPAY_KEY_SECRET && !!process.env.RAZORPAY_WEBHOOK_SECRET
+  && !/replace|placeholder|your_/i.test(process.env.RAZORPAY_KEY_ID || '')
+  && !/replace|placeholder|your_/i.test(process.env.RAZORPAY_KEY_SECRET || '')
+  && !/replace|placeholder|your_/i.test(process.env.RAZORPAY_WEBHOOK_SECRET || '')
+  && !/^rzp_live_/i.test(process.env.RAZORPAY_KEY_ID || '');
 
 async function razorpayRequest(path, payload) {
   let response;
@@ -24,7 +28,7 @@ async function razorpayRequest(path, payload) {
       body: JSON.stringify(payload),
     });
   } catch (_) {
-    const error = new Error('Payment provider could not be reached. Please try again later.'); error.status = 502; throw error;
+    const error = new Error('Payment provider response is uncertain. Keep the order number and contact support before retrying.'); error.status = 502; error.uncertain = true; throw error;
   }
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -50,17 +54,36 @@ exports.quote = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
+function paymentOrderPayload(order, accessToken, pendingProviderReconciliation = false) {
+  return {
+    orderNumber: order.orderNumber, status: order.status, amount: Math.round(order.total * 100), currency: order.currency,
+    razorpayOrderId: order.razorpayOrderId || '', accessToken, keyId: process.env.RAZORPAY_KEY_ID,
+    customer: { name: order.customer.name, email: order.customer.email, phone: order.customer.phone },
+    total: order.total, reservationExpiresAt: order.reservationExpiresAt,
+    items: order.items.map((item) => ({ name: item.name, quantity: item.quantity, unitPrice: item.unitPrice, warrantyMonths: item.warrantyMonths })),
+    pendingProviderReconciliation,
+  };
+}
+
 exports.create = async (req, res, next) => {
-  let order;
+  let order, accessToken, checkoutRequestId;
   try {
-    if (!gatewayReady()) return res.status(503).json({ message: 'Online payment is not configured. Please contact the store; no order or payment has been created.' });
-    const input = z.object({ customer: customerSchema, address: addressSchema, items: itemsSchema, expectedTotal: z.number().finite().nonnegative() }).strict().parse(req.body);
+    if (!gatewayReady()) return res.status(503).json({ message: 'Online payment is temporarily unavailable while the store completes Razorpay Test Mode and webhook setup. No order or payment has been created.' });
+    const input = z.object({ customer: customerSchema, address: addressSchema, items: itemsSchema, expectedTotal: z.number().finite().nonnegative(), checkoutRequestId: z.string().uuid(), accessToken: z.string().regex(/^[A-Za-z0-9_-]{43}$/) }).strict().parse(req.body);
+    accessToken = input.accessToken;
+    checkoutRequestId = input.checkoutRequestId;
+    const accessTokenHash = crypto.createHash('sha256').update(accessToken).digest('hex');
+    const prior = await Order.findOne({ checkoutRequestId }).select('+checkoutRequestId +accessTokenHash');
+    if (prior) {
+      if (prior.accessTokenHash !== accessTokenHash) return res.status(409).json({ message: 'Checkout request could not be verified.' });
+      return res.status(prior.razorpayOrderId ? 200 : 202).json(paymentOrderPayload(prior, accessToken, !prior.razorpayOrderId));
+    }
     const phone = normalizeIndianPhone(input.customer.phone);
     if (!phone) return res.status(400).json({ message: 'Enter a valid Indian mobile number.' });
     const address = { ...input.address, state: 'Maharashtra' };
     const reserved = await service.reserveAndCreate({
       customer: { ...input.customer, phone }, address,
-      items: input.items, expectedTotal: input.expectedTotal, reservationMinutes: reservationMinutes(),
+      items: input.items, expectedTotal: input.expectedTotal, reservationMinutes: reservationMinutes(), accessTokenHash, checkoutRequestId,
     });
     order = reserved.order;
     const gatewayOrder = await razorpayRequest('/orders', {
@@ -72,18 +95,33 @@ exports.create = async (req, res, next) => {
     }
     order.razorpayOrderId = gatewayOrder.id;
     order.statusHistory.push({ action: 'payment_order_created', detail: 'Razorpay test order created.' });
-    await order.save();
-    res.status(201).json({
-      orderNumber: order.orderNumber, status: order.status, amount: gatewayOrder.amount,
-      currency: gatewayOrder.currency, razorpayOrderId: gatewayOrder.id,
-      keyId: process.env.RAZORPAY_KEY_ID, customer: { name: order.customer.name, email: order.customer.email, phone: order.customer.phone },
-      total: order.total, reservationExpiresAt: order.reservationExpiresAt,
-      items: order.items.map((item) => ({ name: item.name, quantity: item.quantity, unitPrice: item.unitPrice, warrantyMonths: item.warrantyMonths })),
-    });
+    try { await order.save(); }
+    catch (error) { error.uncertain = true; throw error; }
+    res.status(201).json(paymentOrderPayload(order, accessToken));
   } catch (error) {
-    if (order) await service.releaseReservation(order._id, 'payment_failed').catch(() => console.error('Reservation rollback failed.'));
+    if (error.code === 11000 && checkoutRequestId) {
+      const prior = await Order.findOne({ checkoutRequestId }).select('+checkoutRequestId +accessTokenHash');
+      const hash = accessToken && crypto.createHash('sha256').update(accessToken).digest('hex');
+      if (prior && prior.accessTokenHash === hash) return res.status(prior.razorpayOrderId ? 200 : 202).json(paymentOrderPayload(prior, accessToken, !prior.razorpayOrderId));
+    }
+    if (order && !error.uncertain) await service.releaseReservation(order._id, 'payment_failed').catch(() => console.error('Reservation rollback failed.'));
     next(error);
   }
+};
+
+exports.receipt = async (req, res, next) => {
+  try {
+    const input = z.object({ accessToken: z.string().regex(/^[A-Za-z0-9_-]{43}$/) }).strict().parse(req.body);
+    const hash = crypto.createHash('sha256').update(input.accessToken).digest('hex');
+    const order = await Order.findOne({ orderNumber: req.params.orderNumber, accessTokenHash: hash })
+      .select('+accessTokenHash orderNumber customer.name address items subtotal discount shippingCharge total currency status paymentStatus razorpayPaymentId createdAt reservationExpiresAt courierName trackingNumber').lean();
+    if (!order) return res.status(404).json({ message: 'Order details could not be verified.' });
+    res.json({ orderNumber: order.orderNumber, customer: { name: order.customer.name }, address: order.address,
+      items: order.items, subtotal: order.subtotal, discount: order.discount, shippingCharge: order.shippingCharge,
+      total: order.total, currency: order.currency, status: order.status, paymentStatus: order.paymentStatus,
+      paymentId: order.paymentStatus === 'captured' ? order.razorpayPaymentId : '', createdAt: order.createdAt,
+      reservationExpiresAt: order.reservationExpiresAt, courierName: order.courierName, trackingNumber: order.trackingNumber });
+  } catch (error) { next(error); }
 };
 
 const verifyPaymentSchema = z.object({
@@ -97,7 +135,7 @@ exports.verifyPayment = async (req, res, next) => {
     const input = verifyPaymentSchema.parse(req.body);
     const order = await Order.findOne({ orderNumber: req.params.orderNumber, razorpayOrderId: input.razorpay_order_id });
     if (!order) return res.status(404).json({ message: 'Order not found.' });
-    if (!exports.verifySignature(`${input.razorpay_order_id}|${input.razorpay_payment_id}`, input.razorpay_signature, process.env.RAZORPAY_KEY_SECRET)) {
+    if (!exports.verifySignature(`${order.razorpayOrderId}|${input.razorpay_payment_id}`, input.razorpay_signature, process.env.RAZORPAY_KEY_SECRET)) {
       return res.status(400).json({ message: 'Payment signature could not be verified.' });
     }
     await Order.updateOne({ _id: order._id, status: 'pending_payment', reservationExpiresAt: { $gt: new Date() } }, {
@@ -123,6 +161,7 @@ async function flagCaptureForRefund(order, paymentId, action, detail) {
 }
 
 exports.webhook = async (req, res, next) => {
+  let claimedEventId = null;
   try {
     if (!process.env.RAZORPAY_WEBHOOK_SECRET) return res.status(503).send('Webhook not configured');
     if (!Buffer.isBuffer(req.body)) return res.status(400).send('Invalid webhook body');
@@ -131,6 +170,22 @@ exports.webhook = async (req, res, next) => {
     if (!eventId || !exports.verifySignature(req.body, signature, process.env.RAZORPAY_WEBHOOK_SECRET)) return res.status(400).send('Invalid webhook signature');
     const event = JSON.parse(req.body.toString('utf8'));
     const eventName = event.event;
+    try {
+      await WebhookEvent.create({ _id: eventId, event: eventName, status: 'processing' });
+      claimedEventId = eventId;
+    } catch (error) {
+      if (error.code !== 11000) throw error;
+      const prior = await WebhookEvent.findById(eventId).lean();
+      if (prior && prior.status === 'processed') return res.json({ received: true, duplicate: true });
+      if (prior && prior.status === 'processing' && prior.receivedAt < new Date(Date.now() - 2 * 60 * 1000)) {
+        const reclaimed = await WebhookEvent.findOneAndUpdate(
+          { _id: eventId, status: 'processing', receivedAt: prior.receivedAt },
+          { $set: { receivedAt: new Date(), event: eventName } }, { new: true }
+        );
+        if (reclaimed) { claimedEventId = eventId; }
+        else return res.status(503).send('Webhook event is being processed; retry later');
+      } else return res.status(503).send('Webhook event is being processed; retry later');
+    }
     const entity = event.payload && event.payload.payment && event.payload.payment.entity;
     const refundEntity = event.payload && event.payload.refund && event.payload.refund.entity;
     const gatewayOrderId = entity && entity.order_id || event.payload && event.payload.order && event.payload.order.entity && event.payload.order.entity.id;
@@ -168,10 +223,13 @@ exports.webhook = async (req, res, next) => {
     } else if (order && eventName === 'refund.failed') {
       await Order.updateOne({ _id: order._id, status: 'refund_pending' }, { $set: { status: 'refund_failed', paymentStatus: 'refund_failed', razorpayRefundId: refundEntity && refundEntity.id || '' }, $push: { statusHistory: { action: 'refund_failed', detail: 'Payment provider reported refund failure.', at: new Date() } } });
     }
-    try { await WebhookEvent.create({ _id: eventId, event: eventName }); }
-    catch (error) { if (error.code !== 11000) throw error; }
+    await WebhookEvent.updateOne({ _id: eventId, status: 'processing' }, { $set: { status: 'processed' } });
+    claimedEventId = null;
     res.json({ received: true });
-  } catch (error) { next(error); }
+  } catch (error) {
+    if (claimedEventId) await WebhookEvent.deleteOne({ _id: claimedEventId, status: 'processing' }).catch(() => {});
+    next(error);
+  }
 };
 
 exports.track = async (req, res, next) => {
@@ -182,7 +240,10 @@ exports.track = async (req, res, next) => {
     const order = await Order.findOne({ orderNumber: input.orderNumber.toUpperCase(), 'customer.phone': phone })
       .select('orderNumber status paymentStatus items total shippingCharge trackingNumber courierName createdAt updatedAt');
     if (!order) return res.status(404).json({ message: 'Order details could not be verified.' });
-    res.json(order);
+    res.json({ orderNumber: order.orderNumber, status: order.status, paymentStatus: order.paymentStatus,
+      items: order.items, total: order.total, shippingCharge: order.shippingCharge,
+      trackingNumber: order.trackingNumber, courierName: order.courierName,
+      createdAt: order.createdAt, updatedAt: order.updatedAt });
   } catch (error) { next(error); }
 };
 

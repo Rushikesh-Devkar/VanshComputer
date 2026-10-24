@@ -1,7 +1,7 @@
 ﻿const STORE = {
-  whatsapp: '919356114946',
-  phone: '+919356114946',
-  phoneLabel: '+91 93561 14946',
+  whatsapp: '919404048303',
+  phone: '+919404048303',
+  phoneLabel: '+91 94040 48303',
   hours: 'Open daily · 10:00 AM–10:00 PM',
   areaShort: 'Sant Tukaram Nagar, Pimpri-Chinchwad',
   addressFull: 'JRC9+J45, Yashwantrao Chavan Rd, Komal Gruh Rachana Society, Sant Tukaram Nagar, Pimpri Colony, Pimpri-Chinchwad, Maharashtra 411018',
@@ -44,16 +44,20 @@ function productCard(p) {
   const cover = p.images && p.images[0];
   const sold = p.status === 'sold' || p.stock < 1;
   const r = p.refurbished;
+  const hasDiscount = Number(p.originalPrice) > Number(p.price);
+  const discount = hasDiscount ? Math.round((Number(p.originalPrice) - Number(p.price)) / Number(p.originalPrice) * 100) : 0;
+  const badges = p.type === 'refurbished'
+    ? [r && r.grade ? h('span', { class: 'badge' }, 'Grade ' + r.grade) : h('span', { class: 'badge' }, 'Refurbished'), r && r.batteryHealth != null ? h('span', { class: 'badge soft' }, 'Battery ' + r.batteryHealth + '%') : null]
+    : [h('span', { class: 'badge' }, 'New')];
+  if (discount > 0) badges.push(h('span', { class: 'badge discount' }, discount + '% OFF'));
   return h('a', { class: 'card', href: 'product.html?slug=' + encodeURIComponent(p.slug) },
     h('div', { class: 'ph' }, cover ? h('img', { src: img(cover.url, 600), alt: cover.alt || p.name, loading: 'lazy' }) : 'Photo jald aayegi'),
     h('div', { class: 'bd' },
-      h('div', {}, p.type === 'refurbished'
-        ? [r && r.grade ? h('span', { class: 'badge' }, 'Grade ' + r.grade) : h('span', { class: 'badge' }, 'Refurbished'), r && r.batteryHealth != null ? h('span', { class: 'badge soft' }, 'Battery ' + r.batteryHealth + '%') : null]
-        : h('span', { class: 'badge' }, 'New')),
+      h('div', {}, badges),
       p.section === 'accessories' && p.subcategory ? h('span', { class: 'muted' }, p.subcategory) : null,
       h('b', {}, p.name),
       h('span', { class: 'muted' }, [p.specs && p.specs.cpu, p.specs && p.specs.ram, p.specs && p.specs.storage].filter(Boolean).join(' · ') || p.subcategory || p.category || p.brand),
-      h('span', { class: 'price' }, sold ? 'Sold' : rupee(p.price))));
+      h('div', { class: 'price-container' }, h('span', { class: 'price' }, sold ? 'Sold' : rupee(p.price)), !sold && hasDiscount ? h('del', { class: 'original-price' }, rupee(p.originalPrice)) : null)));
 }
 
 const ICON = {

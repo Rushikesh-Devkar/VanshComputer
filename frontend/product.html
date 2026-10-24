@@ -97,7 +97,7 @@ function render(p) {
         h('div', {}, p.type === 'refurbished' ? [r && r.grade ? h('span', { class: 'badge' }, 'Grade ' + r.grade) : null, r && r.batteryHealth != null ? h('span', { class: 'badge red' }, 'Battery health ' + r.batteryHealth + '%') : null, h('span', { class: 'badge red' }, 'Refurbished')] : h('span', { class: 'badge' }, 'New')),
         h('h1', { style: 'margin-top:12px' }, p.name),
         h('p', { class: 'muted' }, [p.specs && p.specs.cpu, p.specs && p.specs.ram, p.specs && p.specs.storage].filter(Boolean).join(' · ') + (p.sku ? ' · SKU: ' + p.sku : '')),
-        h('p', { class: 'price', style: 'font-size:32px;margin:12px 0 4px' }, sold ? 'Sold out' : rupee(p.price)),
+        h('div', { class: 'price-container', style: 'margin:12px 0 4px' }, h('p', { class: 'price', style: 'font-size:32px;margin:0' }, sold ? 'Sold out' : rupee(p.price)), !sold && Number(p.originalPrice) > Number(p.price) ? [h('del', { class: 'original-price' }, rupee(p.originalPrice)), h('span', { class: 'badge discount' }, Math.round((Number(p.originalPrice) - Number(p.price)) / Number(p.originalPrice) * 100) + '% OFF')] : null),
         h('p', { class: 'muted' }, sold ? 'Ye laptop bik chuka hai.' : (p.type === 'refurbished' ? 'Sirf 1 piece available · ' : '') + p.warrantyMonths + ' months warranty · Online payment'),
         addToCart, cartStatus,
         wa ? h('div', { style: 'margin-top:12px' }, wa) : null)),

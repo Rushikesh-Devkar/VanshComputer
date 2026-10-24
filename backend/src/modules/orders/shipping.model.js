@@ -9,7 +9,7 @@ const auditSchema = new mongoose.Schema({
 const shippingSchema = new mongoose.Schema({
   _id: { type: String, default: 'maharashtra' },
   maharashtraCharge: { type: Number, min: 0, default: null },
-  freeDeliveryEnabled: { type: Boolean, default: true },
+  freeDeliveryEnabled: { type: Boolean, default: false },
   freeDeliveryMinimum: { type: Number, min: 0, default: null },
   freeDeliveryEndsAt: { type: Date, default: null },
   returnPolicyText: { type: String, default: '', maxlength: 2000 },

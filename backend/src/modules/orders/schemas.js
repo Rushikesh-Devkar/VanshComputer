@@ -21,7 +21,7 @@ exports.customerSchema = z.object({
   gstin: z.string().trim().max(20).optional().default(''),
 }).strict();
 exports.shippingSettingsSchema = z.object({
-  maharashtraCharge: z.number().int().min(0).nullable(),
+  maharashtraCharge: z.number().int().min(0).nullable().optional().default(null),
   freeDeliveryEnabled: z.boolean(),
   freeDeliveryMinimum: z.number().int().min(0).nullable(),
   freeDeliveryEndsAt: z.union([z.string().datetime().transform((value) => new Date(value)), z.null()]),

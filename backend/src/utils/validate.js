@@ -48,6 +48,7 @@ const productBase = z.object({
   }),
   storageGb: z.number().min(0).nullable().optional(),
   price: z.number().min(1),
+  originalPrice: z.number().min(1).nullable().optional(),
   description: z.string().max(3000).optional(),
   featuredOnHome: z.boolean().optional(),
   stock: z.number().int().min(0).optional(),
@@ -68,6 +69,11 @@ const productBase = z.object({
   status: z.enum(['active', 'sold', 'archived']).optional(),
 });
 
-exports.productCreate = productBase;
-exports.productUpdate = productBase.partial();
+const withValidProductPrices = (schema) => schema.superRefine((product, context) => {
+  if (product.originalPrice != null && product.price != null && product.originalPrice < product.price) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['originalPrice'], message: 'Original price must be equal to or greater than the selling price.' });
+  }
+});
+exports.productCreate = withValidProductPrices(productBase);
+exports.productUpdate = withValidProductPrices(productBase.partial());
 exports.objectId = objectId;
