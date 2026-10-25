@@ -9,14 +9,16 @@ const checkoutLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 20, message: 
 const verifyLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 30, message: { message: 'Too many payment verification attempts. Please try again later.' } });
 const trackingLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 15, message: { message: 'Too many tracking attempts. Please try again later.' } });
 const receiptLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 15, message: { message: 'Too many order detail requests. Please try again later.' } });
+const mineLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 60, message: { message: 'Too many order requests. Please try again later.' } });
 const managers = [requireAuth, requireRole('owner', 'manager')];
 
 router.get('/shipping', shipping.get);
 router.put('/shipping', ...managers, shipping.update);
 router.post('/quote', quoteLimit, c.quote);
-router.post('/', checkoutLimit, requireAuth, requireRole('customer'), c.create);
-router.get('/mine', requireAuth, requireRole('customer'), c.accountOrders);
-router.post('/track', trackingLimit, c.track);
+router.post('/', checkoutLimit, requireAuth('customer'), requireRole('customer'), c.create);
+router.get('/mine', mineLimit, requireAuth('customer'), requireRole('customer'), c.accountOrders);
+router.get('/mine/:orderNumber', receiptLimit, requireAuth('customer'), requireRole('customer'), c.mineDetail);
+router.post('/track', trackingLimit, requireAuth('customer'), requireRole('customer'), c.track);
 router.post('/:orderNumber/receipt', receiptLimit, c.receipt);
 router.post('/:orderNumber/payment/verify', verifyLimit, c.verifyPayment);
 router.get('/admin', ...managers, c.adminList);

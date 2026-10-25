@@ -33,6 +33,7 @@ async function api(path, opts) {
   if (!res.ok) {
     const err = new Error((data && data.message) || 'Kuch galat hua, dobara try karo');
     err.data = data;
+    err.status = res.status;
     throw err;
   }
   return data;
@@ -116,6 +117,14 @@ function renderChrome() {
     const v = document.getElementById('hq').value.trim();
     location.href = 'shop.html' + (v ? '?q=' + encodeURIComponent(v) : '');
   });
+  api('/api/customer/me').then((user) => {
+    const link = document.getElementById('userAccountNav');
+    if (!link) return;
+    link.querySelector('span').textContent = 'Hi, ' + (user.name || '').split(/\s+/)[0];
+    link.setAttribute('aria-label', 'Account for ' + user.name);
+    link.after(h('button', { type: 'button', class: 'account-link', id: 'customerLogout' }, 'Sign out'));
+    document.getElementById('customerLogout').addEventListener('click', logout);
+  }).catch(() => { const label = document.querySelector('#userAccountNav span'); if (label) label.textContent = 'Sign in'; });
 
   document.getElementById('ftr').innerHTML =
     '<footer class="site"><div class="wrap fgrid">' +
@@ -126,6 +135,11 @@ function renderChrome() {
       '<div><b>Visit our store</b><p>' + BUSINESS.tradeName + '</p><p>' + S.addressFull + '</p><p>' + S.hours + '</p><p>' + BUSINESS.email + '</p><p>' + BUSINESS.gstin + '</p><a href="' + S.mapsUrl + '" target="_blank" rel="noopener">Get directions ↗</a></div>' +
       '<div><b>Policies</b><a href="about.html">About</a><a href="contact.html">Contact</a><a href="terms.html">Terms</a><a href="privacy.html">Privacy</a><a href="shipping-policy.html">Shipping</a><a href="warranty-policy.html">Warranty</a><a href="refund-policy.html">Cancellation, Return &amp; Refund</a></div>' +
     '</div><div class="wrap fcopy">© 2026 ' + BUSINESS.tradeName + '. All rights reserved.</div></footer>';
+}
+
+async function logout() {
+  await fetch('/api/customer/logout', { method: 'POST', credentials: 'same-origin' });
+  location.reload();
 }
 
 function getCart() {

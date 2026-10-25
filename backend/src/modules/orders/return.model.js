@@ -11,6 +11,7 @@ const returnSchema = new mongoose.Schema({
   order: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', required: true, index: true },
   orderNumber: { type: String, required: true, index: true },
   customerPhone: { type: String, required: true },
+  customerAccount: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null, index: true },
   reason: { type: String, required: true, enum: ['not_as_described', 'defective_or_not_working', 'damaged_in_transit', 'wrong_item'] },
   details: { type: String, required: true, minlength: 20, maxlength: 3000 },
   proofs: { type: [proofSchema], required: true, minlength: 2, maxlength: 7 },

@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 const Product = require('../src/modules/products/product.model');
 const ShippingSettings = require('../src/modules/orders/shipping.model');
 const Order = require('../src/modules/orders/order.model');
-const { itemsSchema, addressSchema } = require('../src/modules/orders/schemas');
+const { itemsSchema, addressSchema, trackingSchema } = require('../src/modules/orders/schemas');
 const service = require('../src/modules/orders/order.service');
 const controller = require('../src/modules/orders/order.controller');
 
@@ -25,6 +25,30 @@ test('checkout item schema rejects client supplied prices and duplicate products
 test('delivery address rejects states other than Maharashtra', () => {
   assert.equal(addressSchema.parse(validAddress).state, 'Maharashtra');
   assert.throws(() => addressSchema.parse({ ...validAddress, state: 'Gujarat' }));
+});
+
+test('tracking schema accepts only an order number', () => {
+  assert.equal(trackingSchema.parse({ orderNumber: 'VC20261025-ABCDEF12' }).orderNumber, 'VC20261025-ABCDEF12');
+  assert.throws(() => trackingSchema.parse({ orderNumber: 'VC20261025-ABCDEF12', phone: '9999999999' }));
+});
+
+test('tracking requires customer login and returns 404 for another customer order', async () => {
+  const routes = require('../src/modules/orders/orders.routes');
+  const layer = routes.stack.find((item) => item.route && item.route.path === '/track');
+  const auth = layer.route.stack[1].handle;
+  let status, body, advanced = false;
+  await auth({ cookies: {} }, { status(code) { status = code; return this; }, json(value) { body = value; } }, () => { advanced = true; });
+  assert.equal(status, 401); assert.equal(advanced, false); assert.equal(body.message, 'Login required');
+
+  const original = Order.findOne;
+  let query;
+  Order.findOne = (value) => ({ select: async () => { query = value; return null; } });
+  try {
+    const response = { status(code) { status = code; return this; }, json(value) { body = value; return this; } };
+    await controller.track({ body: { orderNumber: 'VC20261025-ABCDEF12' }, user: { _id: 'customer-two' } }, response, (error) => { throw error; });
+    assert.deepEqual(query, { orderNumber: 'VC20261025-ABCDEF12', customerAccount: 'customer-two' });
+    assert.equal(status, 404); assert.equal(body.message, 'Order details could not be verified.');
+  } finally { Order.findOne = original; }
 });
 
 test('quote uses current database price and free delivery defaults', async () => {

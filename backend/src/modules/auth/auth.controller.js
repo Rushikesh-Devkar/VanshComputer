@@ -23,7 +23,7 @@ exports.login = async (req, res, next) => {
     const { email, password } = loginSchema.parse(req.body);
     const user = await User.findOne({ email: email.toLowerCase() }).select('+passwordHash');
     const ok = await bcrypt.compare(password, user ? user.passwordHash : DUMMY_HASH);
-    if (!user || !ok || !user.active) {
+    if (!user || !ok || !user.active || user.role === 'customer') {
       return res.status(401).json({ message: 'Email ya password galat hai' });
     }
     const token = jwt.sign({ sub: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '12h' });

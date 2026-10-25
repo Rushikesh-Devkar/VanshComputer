@@ -2,7 +2,6 @@ const crypto = require('crypto');
 const cloudinary = require('../../config/cloudinary');
 const Order = require('./order.model');
 const ReturnRequest = require('./return.model');
-const { normalizeIndianPhone } = require('../../utils/phone');
 const { z } = require('zod');
 const service = require('./return.service');
 
@@ -37,10 +36,9 @@ exports.policy = async (req, res, next) => { try { res.json(await service.getSet
 exports.create = async (req, res, next) => {
   const uploaded = [];
   try {
-    const phone = normalizeIndianPhone(req.body.phone);
     const orderNumber = String(req.params.orderNumber).trim().toUpperCase();
-    const order = await Order.findOne({ orderNumber });
-    if (!phone || !order || normalizeIndianPhone(order.customer.phone) !== phone) return res.status(404).json({ message: 'Order details could not be verified.' });
+    const order = await Order.findOne({ orderNumber, customerAccount: req.user._id });
+    if (!order) return res.status(404).json({ message: 'Order details could not be verified.' });
     const settings = await service.getSettings();
     if (!service.isEligible(order, settings)) return res.status(409).json({ message: 'This order is not eligible for a return.' });
     const existing = await ReturnRequest.findOne({ order: order._id, status: { $in: service.OPEN_STATUSES } });
@@ -57,7 +55,7 @@ exports.create = async (req, res, next) => {
     const proofs = [];
     for (const file of files) { const result = await upload(file, order.orderNumber); uploaded.push(result); proofs.push({ publicId: result.public_id, resourceType: result.resourceType, bytes: file.size }); }
     const request = await ReturnRequest.create({
-      requestNumber: requestNumber(), order: order._id, orderNumber: order.orderNumber, customerPhone: phone,
+      requestNumber: requestNumber(), order: order._id, orderNumber: order.orderNumber, customerPhone: order.customer.phone, customerAccount: req.user._id,
       reason, details, proofs, refundAmount: service.calculateRefundAmount(order, settings),
       returnChargeDeducted: settings.returnShippingMode === 'deduct_from_refund' ? Number(settings.returnShippingCharge || 0) : 0,
       statusHistory: [{ action: 'requested', detail: 'Return request submitted.' }],
@@ -71,13 +69,21 @@ exports.create = async (req, res, next) => {
 
 exports.status = async (req, res, next) => {
   try {
-    const input = z.object({ phone: z.string().trim().min(7).max(24) }).strict().parse(req.body);
-    const phone = normalizeIndianPhone(input.phone);
-    const request = await ReturnRequest.findOne({ requestNumber: String(req.params.requestNumber).toUpperCase(), customerPhone: phone }).select('-proofs');
+    const request = await ReturnRequest.findOne({ requestNumber: String(req.params.requestNumber).toUpperCase(), customerAccount: req.user._id }).select('-proofs');
     if (!request) return res.status(404).json({ message: 'Return request could not be verified.' });
-    res.json(request);
+    res.json({ requestNumber: request.requestNumber, orderNumber: request.orderNumber, reason: request.reason, details: request.details,
+      refundAmount: request.refundAmount, returnChargeDeducted: request.returnChargeDeducted, status: request.status,
+      rejectionReason: request.rejectionReason, adminNote: request.adminNote, returnCourier: request.returnCourier, returnTracking: request.returnTracking,
+      createdAt: request.createdAt, updatedAt: request.updatedAt, statusHistory: (request.statusHistory || []).map(({ action, at }) => ({ action, at })) });
   } catch (error) { next(error); }
 };
+
+exports.mine = async (req, res, next) => { try {
+  const requests = await ReturnRequest.find({ customerAccount: req.user._id }).sort({ createdAt: -1 }).limit(100).select('-proofs -customerPhone -customerAccount -order').lean();
+  res.json({ items: requests.map(({ requestNumber, orderNumber, reason, details, refundAmount, returnChargeDeducted, status, createdAt, updatedAt, statusHistory }) =>
+    ({ requestNumber, orderNumber, reason, details, refundAmount, returnChargeDeducted, status, createdAt, updatedAt,
+      statusHistory: (statusHistory || []).map(({ action, at }) => ({ action, at })) })) });
+} catch (error) { next(error); } };
 
 exports.list = async (req, res, next) => { try { res.json(await ReturnRequest.find({}).sort({ createdAt: -1 }).limit(200).select('-proofs')); } catch (error) { next(error); } };
 exports.detail = async (req, res, next) => { try { const value = await ReturnRequest.findById(req.params.id).populate('order'); if (!value) return res.status(404).json({ message: 'Return request not found.' }); res.json(value); } catch (error) { next(error); } };

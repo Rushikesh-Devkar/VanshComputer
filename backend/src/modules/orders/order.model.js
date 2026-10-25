@@ -69,8 +69,6 @@ const orderSchema = new mongoose.Schema({
   courierName: { type: String, default: '' },
   trackingNumber: { type: String, default: '' },
   statusHistory: { type: [auditSchema], default: [] },
-  deliveredAt: { type: Date, default: null, index: true },
-  refundExpectedAmount: { type: Number, default: null, min: 0 },
 }, { timestamps: true, versionKey: false });
 
 module.exports = mongoose.model('Order', orderSchema);

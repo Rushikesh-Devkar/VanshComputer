@@ -4,7 +4,6 @@ const Order = require('./order.model');
 const ReturnRequest = require('./return.model');
 const WebhookEvent = require('./webhook-event.model');
 const { itemsSchema, addressSchema, quoteAddressSchema, customerSchema, trackingSchema, policyConsentSchema } = require('./schemas');
-const { normalizeIndianPhone } = require('../../utils/phone');
 const service = require('./order.service');
 
 const reservationMinutes = () => Math.min(60, Math.max(5, Number(process.env.PAYMENT_RESERVATION_MINUTES) || 15));
@@ -153,10 +152,30 @@ exports.create = async (req, res, next) => {
 
 exports.accountOrders = async (req, res, next) => {
   try {
-    const orders = await Order.find({ customerAccount: req.user._id })
-      .select('orderNumber status paymentStatus total currency createdAt updatedAt')
+    const filter = { customerAccount: req.user._id };
+    if (req.query.all !== '1') {
+      filter.status = { $nin: ['expired', 'payment_failed'] };
+      filter.$or = [{ status: { $ne: 'pending_payment' } }, { reservationExpiresAt: { $gt: new Date() } }];
+    }
+    const orders = await Order.find(filter)
+      .select('orderNumber status paymentStatus total currency createdAt updatedAt courierName trackingNumber deliveredAt items.name items.imageUrl items.quantity')
       .sort({ createdAt: -1 }).limit(50).lean();
     res.json({ items: orders });
+  } catch (error) { next(error); }
+};
+
+exports.mineDetail = async (req, res, next) => {
+  try {
+    const order = await Order.findOne({ orderNumber: String(req.params.orderNumber).trim().toUpperCase(), customerAccount: req.user._id })
+      .select('orderNumber items address subtotal discount shippingCharge total currency status paymentStatus razorpayPaymentId courierName trackingNumber deliveredAt createdAt statusHistory')
+      .lean();
+    if (!order) return res.status(404).json({ message: 'Order details could not be verified.' });
+    const items = (order.items || []).map(({ name, imageUrl, quantity, unitPrice, originalPrice, lineTotal, warrantyMonths, type }) =>
+      ({ name, imageUrl, quantity, unitPrice, originalPrice, lineTotal, warrantyMonths, type }));
+    res.json({ orderNumber: order.orderNumber, items, address: order.address, subtotal: order.subtotal, discount: order.discount,
+      shippingCharge: order.shippingCharge, total: order.total, currency: order.currency, status: order.status, paymentStatus: order.paymentStatus,
+      ...(order.paymentStatus === 'captured' ? { paymentId: order.razorpayPaymentId } : {}), courierName: order.courierName, trackingNumber: order.trackingNumber,
+      deliveredAt: order.deliveredAt, createdAt: order.createdAt, statusHistory: (order.statusHistory || []).map(({ action, at }) => ({ action, at })) });
   } catch (error) { next(error); }
 };
 
@@ -292,15 +311,14 @@ exports.webhook = async (req, res, next) => {
 exports.track = async (req, res, next) => {
   try {
     const input = trackingSchema.parse(req.body);
-    const phone = normalizeIndianPhone(input.phone);
-    if (!phone) return res.status(404).json({ message: 'Order details could not be verified.' });
-    const order = await Order.findOne({ orderNumber: input.orderNumber.toUpperCase(), 'customer.phone': phone })
-      .select('orderNumber status paymentStatus items total shippingCharge trackingNumber courierName deliveredAt createdAt updatedAt');
+    const order = await Order.findOne({ orderNumber: input.orderNumber.toUpperCase(), customerAccount: req.user._id })
+      .select('orderNumber status paymentStatus items total shippingCharge address statusHistory trackingNumber courierName deliveredAt createdAt updatedAt');
     if (!order) return res.status(404).json({ message: 'Order details could not be verified.' });
     res.json({ orderNumber: order.orderNumber, status: order.status, paymentStatus: order.paymentStatus,
       items: order.items, total: order.total, shippingCharge: order.shippingCharge,
       trackingNumber: order.trackingNumber, courierName: order.courierName,
-      deliveredAt: order.deliveredAt, createdAt: order.createdAt, updatedAt: order.updatedAt });
+      deliveredAt: order.deliveredAt, createdAt: order.createdAt, updatedAt: order.updatedAt, address: order.address,
+      statusHistory: (order.statusHistory || []).map(({ action, at }) => ({ action, at })) });
   } catch (error) { next(error); }
 };
 

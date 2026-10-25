@@ -15,7 +15,15 @@
 5. Sign into `admin.html` with an owner or manager account. If no owner exists, create one from `backend` with `node scripts/createOwner.js owner@example.com "a-password-at-least-10-chars" "Owner"`. In Shipping Settings, configure the Maharashtra courier charge whenever free delivery has a minimum/end date or is turned off. Free delivery starts enabled with no minimum and no end date.
 6. In the selected Razorpay mode, configure the webhook URL as `https://<your-host>/api/orders/webhook` and subscribe to payment captured/failed, order paid, and refund processed/failed events. Keep the webhook secret in the server environment only.
 
-The cart quote and final order both use current MongoDB prices and server-side shipping settings. The final order reserves stock inside a transaction. A background worker and payment endpoints release unpaid reservations after the configured period. Customer tracking requires the order number and checkout mobile number. Admin order and shipping writes require owner/manager authentication.
+The cart quote and final order both use current MongoDB prices and server-side shipping settings. The final order reserves stock inside a transaction. A background worker and payment endpoints release unpaid reservations after the configured period. Customer tracking and return requests require the signed-in customer account that owns the order. Admin order and shipping writes require owner/manager authentication.
+
+## Customer accounts, tracking, and returns
+
+- Staff sessions use the `token` HTTP-only cookie; customer sessions use `ctoken`. Both cookies are independent. Customer routes verify the customer role on the backend.
+- Sign in at `/api/customer/login` (or register at `/api/customer/register`). `GET /api/orders/mine` lists the customer's orders; `GET /api/orders/mine/:orderNumber` returns one owned order's details; `POST /api/orders/track` accepts only `{ "orderNumber": "VC..." }` and uses the customer session.
+- Create a return with `POST /api/orders/:orderNumber/returns` as multipart form data (`reason`, `details`, 2–6 `proof` images, optional `video`). Check requests with `GET /api/orders/returns/mine` or `POST /api/orders/returns/:requestNumber/status`. Both are scoped to the signed-in account.
+- Password reset uses `POST /api/customer/forgot-password` with email and `POST /api/customer/reset-password` with token and a 10+ character password. Links expire after 30 minutes. Without a configured mail service, development logs the reset link to the server console; the request response is generic. Signed-in customers can use `POST /api/customer/change-password` with current and new passwords.
+- `POST /api/customer/logout` clears the customer cookie; `/api/auth/logout` clears the staff cookie.
 
 ## Payment and tax behavior
 
@@ -38,7 +46,7 @@ After configuring Razorpay Test Mode and a reachable webhook endpoint, verify ma
 - Test payment failure/expiry, late capture refund review, and a test-mode full refund.
 - Sign in as inventory/sales and verify order/shipping admin APIs deny access; verify owner/manager fulfillment updates and tracking fields.
 - In Shipping Settings, leave returns disabled until the policy and owner values are reviewed. Configure the return window, eligible reasons, return-shipping mode/charge, original-delivery refund choice, and refund processing days.
-- Mark a paid order delivered and verify `deliveredAt` is recorded. Track it with the customer phone, submit 2–6 valid proof images, and verify a duplicate open request is rejected.
+- Mark a paid order delivered and verify `deliveredAt` is recorded. Sign in to its customer account to view it, submit 2–6 valid proof images, and verify a duplicate open request is rejected.
 - As owner/manager, review the request, approve it, record receipt and inspection, then issue a partial refund. Verify the server-computed breakdown, the refund webhook amount match, and the mismatch path. Verify sales/inventory roles cannot list or modify returns.
 - Confirm rejected requests show their reason to the customer and that proof uploads use authenticated Cloudinary resources. No card data is stored by this application.
 

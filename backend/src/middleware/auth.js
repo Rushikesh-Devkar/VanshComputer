@@ -1,9 +1,9 @@
 const jwt = require('jsonwebtoken');
 const User = require('../modules/auth/user.model');
 
-exports.requireAuth = async (req, res, next) => {
+const authenticate = (kind = 'staff') => async (req, res, next) => {
   try {
-    const token = req.cookies && req.cookies.token;
+    const token = req.cookies && req.cookies[kind === 'customer' ? 'ctoken' : 'token'];
     if (!token) return res.status(401).json({ message: 'Login required' });
     const payload = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(payload.sub);
@@ -13,6 +13,12 @@ exports.requireAuth = async (req, res, next) => {
   } catch (e) {
     return res.status(401).json({ message: 'Session expired, dobara login karo' });
   }
+};
+
+// Existing staff routes use this directly; customer routes pass requireAuth('customer').
+exports.requireAuth = (kind = 'staff', res, next) => {
+  if (typeof kind !== 'string') return authenticate('staff')(kind, res, next);
+  return authenticate(kind);
 };
 
 // Role ki permission backend mein check hoti hai, sirf button chhupana kaafi nahi

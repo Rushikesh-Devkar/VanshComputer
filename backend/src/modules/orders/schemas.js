@@ -30,8 +30,6 @@ exports.shippingSettingsSchema = z.object({
   freeDeliveryMinimum: z.number().int().min(0).nullable(),
   freeDeliveryEndsAt: z.union([z.string().datetime().transform((value) => new Date(value)), z.null()]),
   returnPolicyText: z.string().trim().max(2000),
-  returnsEnabled: z.boolean().optional().default(true),
-  returnWindowDays: z.number().int().min(0).max(90).optional().default(7),
   returnShippingDeduction: z.number().min(0).optional().default(0),
   gstin: z.string().trim().max(20).optional().default(''),
   gstRate: z.number().min(0).max(100).nullable().optional().default(null),
@@ -46,5 +44,4 @@ exports.shippingSettingsSchema = z.object({
 }).strict();
 exports.trackingSchema = z.object({
   orderNumber: z.string().trim().regex(/^VC\d{8}-[A-F\d]{8}$/i),
-  phone: z.string().min(8).max(24),
 }).strict();
