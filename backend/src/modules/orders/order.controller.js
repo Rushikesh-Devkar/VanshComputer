@@ -82,6 +82,16 @@ function paymentOrderPayload(order, accessToken, pendingProviderReconciliation =
 exports.create = async (req, res, next) => {
   let order, accessToken, checkoutRequestId;
   try {
+     console.log("RAZORPAY_CONFIG_CHECK", {
+      modeIsLive: process.env.PAYMENT_MODE === "live",
+      keyHasLivePrefix: (process.env.RAZORPAY_KEY_ID || "").startsWith("rzp_live_"),
+      apiSecretPresent: !!process.env.RAZORPAY_KEY_SECRET,
+      webhookSecretPresent: !!process.env.RAZORPAY_WEBHOOK_SECRET,
+      keyFormatValid: /^rzp_live_[A-Za-z0-9]+$/.test(
+        process.env.RAZORPAY_KEY_ID || ""
+      ),
+    });
+
     if (!gatewayReady()) return res.status(503).json({ message: paymentSetupMessage('Online') });
     const input = z.object({ customer: customerSchema, address: addressSchema, items: itemsSchema, expectedTotal: z.number().finite().nonnegative(), checkoutRequestId: z.string().uuid(), accessToken: z.string().regex(/^[A-Za-z0-9_-]{43}$/), ...policyConsentSchema.shape }).strict().parse(req.body);
     accessToken = input.accessToken;
