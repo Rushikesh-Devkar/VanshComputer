@@ -3,6 +3,9 @@
 exports.notFound = (req, res) => res.status(404).json({ message: 'Route not found' });
 
 exports.errorHandler = (err, req, res, next) => {
+  if (err.http_code === 401) {
+    return res.status(503).json({ message: 'Cloudinary credentials were rejected. Update the current account credentials and restart the backend.' });
+  }
   if (err.status && err.status >= 400 && err.status < 600) {
     return res.status(err.status).json({ message: err.message || 'Request failed' });
   }

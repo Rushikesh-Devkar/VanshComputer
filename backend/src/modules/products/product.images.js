@@ -13,6 +13,7 @@ const looksLikeImage = (buf) => {
 
 const uploadBuffer = (buffer, folder) =>
   new Promise((resolve, reject) => {
+    cloudinary.assertConfigured();
     const stream = cloudinary.uploader.upload_stream(
       {
         folder,

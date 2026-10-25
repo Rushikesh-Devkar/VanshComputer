@@ -17,15 +17,15 @@
 .row span:first-child{color:var(--muted)}
 .box{background:var(--bg);border-radius:14px;padding:20px;margin-top:20px;display:flex;flex-direction:column;gap:10px}
 h2{font-size:22px;margin:32px 0 8px}
-.review-layout{display:grid;grid-template-columns:minmax(260px,.8fr) minmax(0,1.2fr);gap:24px;margin:18px 0 48px;align-items:start}.review-form,.review-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px}.review-form{display:grid;gap:12px}.review-form label{display:grid;gap:6px;font-size:13px;font-weight:700}.review-form input,.review-form textarea,.review-form select{width:100%;border:1px solid var(--line);border-radius:9px;padding:11px;font:inherit}.review-form textarea{min-height:110px;resize:vertical}.review-list{display:grid;gap:12px}.review-card p{margin:10px 0;line-height:1.6;white-space:pre-line}.review-stars{color:#E99A13;letter-spacing:2px}.review-photos{display:flex;gap:8px;flex-wrap:wrap}.review-photos img{width:72px;height:72px;object-fit:cover;border-radius:8px}.review-status{min-height:20px}.review-status.error{color:#b91c1c}
-@media(max-width:700px){.review-layout{grid-template-columns:1fr}}
+.review-intro{max-width:680px;color:var(--muted);line-height:1.6}.review-layout{display:grid;grid-template-columns:minmax(260px,.85fr) minmax(0,1.5fr);gap:32px;margin:18px 0 48px;align-items:start}.review-panel{min-width:0}.review-form,.review-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px}.review-form{display:grid;gap:12px;position:sticky;top:20px;box-shadow:0 2px 10px rgba(15,23,42,.05)}.review-form[hidden]{display:none}.review-form label{display:grid;gap:6px;font-size:13px;font-weight:700}.review-form input,.review-form textarea,.review-form select{width:100%;border:1px solid var(--line);border-radius:9px;padding:11px;font:inherit}.review-form textarea{min-height:110px;resize:vertical}.review-note{margin:0;padding:9px 12px;border-radius:8px;background:#f8fafc;color:var(--muted);font-size:12px;line-height:1.5}.review-list{display:grid;gap:12px}.review-card p{margin:10px 0;line-height:1.6;white-space:pre-line}.review-stars{color:#E99A13;letter-spacing:2px}.review-photos{display:flex;gap:8px;flex-wrap:wrap}.review-photos img{width:72px;height:72px;object-fit:cover;border-radius:8px}.review-status{min-height:20px}.review-status.error{color:#b91c1c}.review-cta{margin:0 0 14px}.review-empty{padding:18px;border:1px dashed var(--line);border-radius:12px;color:var(--muted);line-height:1.5}
+@media(max-width:700px){.review-layout{grid-template-columns:1fr;gap:18px}.review-form{position:static}}
 </style>
 </head>
 <body>
 <div id="hdr"></div>
 <main class="wrap" id="app"><p class="muted">Loading...</p></main>
 <div id="ftr"></div>
-<script src="js/common.js"></script>
+<script src="js/business.js"></script><script src="js/common.js"></script>
 <script>
 renderChrome();
 const app = document.getElementById('app');
@@ -78,16 +78,20 @@ function render(p) {
 
   const reviewSection = h('section', { class: 'product-reviews' },
     h('h2', {}, 'Customer reviews'),
-    h('p', { class: 'muted' }, 'Share your experience with this product. Reviews are checked before they appear.'),
+    h('p', { class: 'review-intro' }, 'See what other customers thought, or share your own experience.'),
     h('div', { class: 'review-layout' },
-      h('form', { class: 'review-form', id: 'reviewForm', enctype: 'multipart/form-data' },
+      h('div', { class: 'review-panel' },
+        h('button', { class: 'btn review-cta', id: 'reviewToggle', type: 'button', 'aria-expanded': 'false', 'aria-controls': 'reviewForm' }, 'Write a review'),
+        h('form', { class: 'review-form', id: 'reviewForm', enctype: 'multipart/form-data', hidden: true },
         h('b', {}, 'Write a review'),
+        h('p', { class: 'review-note' }, 'Reviews are checked before they appear.'),
         h('label', {}, 'Your name', h('input', { name: 'customerName', maxlength: '80', required: true, autocomplete: 'name' })),
         h('label', {}, 'Your rating', h('select', { name: 'rating', required: true }, [h('option', { value: '' }, 'Choose a rating'), ...[1,2,3,4,5].map((value) => h('option', { value }, `${value} star${value === 1 ? '' : 's'}`))])),
         h('label', {}, 'Your review', h('textarea', { name: 'text', maxlength: '1200', required: true, placeholder: 'What did you think about this product?' })),
         h('label', {}, 'Photos (optional, up to 3)', h('input', { name: 'images', type: 'file', accept: 'image/jpeg,image/png,image/webp', multiple: true })),
         h('button', { class: 'btn', type: 'submit' }, 'Submit review'),
         h('p', { class: 'muted review-status', id: 'reviewStatus', role: 'status' })),
+      ),
       h('div', { class: 'review-list', id: 'productReviews' }, h('p', { class: 'muted' }, 'Loading reviews...'))));
 
   app.replaceChildren(
@@ -115,8 +119,16 @@ function render(p) {
     ] : null,
     reviewSection);
 
-  loadProductReviews(p._id);
   const reviewForm = document.getElementById('reviewForm');
+  const reviewToggle = document.getElementById('reviewToggle');
+  const setReviewFormOpen = (open) => {
+    reviewForm.hidden = !open;
+    reviewToggle.setAttribute('aria-expanded', String(open));
+    reviewToggle.textContent = open ? 'Close review form' : 'Write a review';
+    if (open) reviewForm.elements.customerName.focus();
+  };
+  reviewToggle.addEventListener('click', () => setReviewFormOpen(reviewForm.hidden));
+  loadProductReviews(p._id, () => setReviewFormOpen(true));
   reviewForm.addEventListener('submit', async (event) => {
     event.preventDefault();
     const status = document.getElementById('reviewStatus');
@@ -143,11 +155,16 @@ function reviewCard(review) {
     h('p', {}, review.text),
     (review.images || []).length ? h('div', { class: 'review-photos' }, review.images.map((image) => h('img', { src: image.url, alt: 'Customer review photo', loading: 'lazy' }))) : null);
 }
-async function loadProductReviews(productId) {
+async function loadProductReviews(productId, openReviewForm) {
   const list = document.getElementById('productReviews');
   try {
     const reviews = listOf(await api('/api/reviews?product=' + encodeURIComponent(productId)));
-    list.replaceChildren(...(reviews.length ? reviews.map(reviewCard) : [h('p', { class: 'muted' }, 'No approved reviews yet. Be the first to share yours.')]));
+    list.replaceChildren(...(reviews.length ? reviews.map(reviewCard) : [
+      h('div', { class: 'review-empty' },
+        h('p', {}, 'No approved reviews yet. Be the first to share yours.'),
+        h('button', { class: 'btn line', type: 'button', onclick: openReviewForm }, 'Be the first to review'),
+      ),
+    ]));
   } catch (error) { list.replaceChildren(h('p', { class: 'muted' }, error.message)); }
 }
 

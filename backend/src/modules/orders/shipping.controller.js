@@ -4,10 +4,9 @@ const { shippingSettingsSchema } = require('./schemas');
 exports.get = async (req, res, next) => {
   try {
     const settings = await ShippingSettings.findById('maharashtra').select('-auditHistory -updatedBy').lean();
-    res.json(settings || { maharashtraCharge: null, freeDeliveryEnabled: false, freeDeliveryMinimum: null, freeDeliveryEndsAt: null, returnPolicyText: '', gstin: '', gstRate: null, gstCalculationEnabled: false });
+    res.json(settings || { maharashtraCharge: null, freeDeliveryEnabled: true, freeDeliveryMinimum: null, freeDeliveryEndsAt: null, returnPolicyText: '', returnsEnabled: false, returnWindowDays: null, eligibleReasons: ['not_as_described', 'defective_or_not_working', 'damaged_in_transit', 'wrong_item'], returnShippingMode: 'customer_ships', returnShippingCharge: null, refundOriginalDelivery: false, refundProcessingDays: null, gstin: '', gstRate: null, gstCalculationEnabled: false });
   } catch (error) { next(error); }
 };
-
 exports.update = async (req, res, next) => {
   try {
     const fields = shippingSettingsSchema.parse(req.body);

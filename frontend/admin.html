@@ -25,15 +25,15 @@ body{background:#F3F6FA}.admin{max-width:none;margin:0;padding:0}.panel{backgrou
   <section class="panel" id="loginPanel">
     <h1>Admin login</h1><p class="hint">Login with the shop owner or manager account to edit the homepage banner.</p>
     <form id="loginForm">
-      <div class="field"><label for="email">Email</label><input id="email" type="email" autocomplete="username" required></div>
-      <div class="field"><label for="password">Password</label><input id="password" type="password" autocomplete="current-password" required></div>
+      <div class="field"><label for="email">Email</label><input id="email" type="email" autocomplete="username" placeholder="Enter owner or manager email" required></div>
+      <div class="field"><label for="password">Password</label><input id="password" type="password" autocomplete="current-password" placeholder="Enter your password" required></div>
       <button class="btn" type="submit">Log in</button><p class="status" id="loginStatus" role="status"></p>
     </form>
   </section>
 
   <div class="dashboard" id="dashboard">
   <div class="admin-topbar"><div class="admin-brand"><img src="img/logo.jpg" alt=""><span>Vansh Computer Admin</span></div><h1 id="viewTitle">Banners</h1><button id="logout" class="btn line" type="button" hidden>Log out</button></div>
-  <div class="dashboard-layout"><aside class="sidebar" id="admin-sidebar"><div class="sidebar-brand"><img src="img/logo.jpg" alt="Vansh Computer logo"><strong>Vansh Computer</strong><span>Store administration</span></div><div class="sidebar-label">Manage store</div><nav aria-label="Admin sections"><a href="#banners" data-view="banners"><span class="nav-icon">▧</span>Banners</a><a href="#stories" data-view="stories" data-owner-only><span class="nav-icon">☆</span>Reviews &amp; Reels</a><a href="#products" data-view="products"><span class="nav-icon">▦</span>Products</a><a href="#shipping" data-view="shipping" data-owner-only><span class="nav-icon">⌁</span>Shipping</a><a href="#orders" data-view="orders" data-owner-only><span class="nav-icon">▤</span>Orders</a></nav></aside><div class="dashboard-main" id="admin-main"><div class="admin-view active" data-panel="banners">
+  <div class="dashboard-layout"><aside class="sidebar" id="admin-sidebar"><div class="sidebar-brand"><img src="img/logo.jpg" alt="Vansh Computer logo"><strong>Vansh Computer</strong><span>Store administration</span></div><div class="sidebar-label">Manage store</div><nav aria-label="Admin sections"><a href="#banners" data-view="banners"><span class="nav-icon">▧</span>Banners</a><a href="#stories" data-view="stories" data-owner-only><span class="nav-icon">☆</span>Reviews &amp; Reels</a><a href="#products" data-view="products"><span class="nav-icon">▦</span>Products</a><a href="#shipping" data-view="shipping" data-owner-only><span class="nav-icon">⌁</span>Shipping</a><a href="#orders" data-view="orders" data-owner-only><span class="nav-icon">▤</span>Orders</a><a href="#returns" data-view="returns" data-owner-only><span class="nav-icon">↩</span>Returns <b id="returnUnreadBadge" hidden>0</b></a></nav></aside><div class="dashboard-main" id="admin-main"><div class="admin-view active" data-panel="banners">
   <section class="panel" id="editor">
     <div class="section-links"><a href="#editor">Homepage banner</a><a href="#shopBannerForm">Shop offer banner</a><a href="#socialContent">Reviews &amp; Reels</a><a href="#productsPanel">Products</a><a href="#shippingPanel">Shipping Settings</a><a href="#ordersPanel">Orders</a></div>
     <h1>Homepage banner</h1><p class="hint">Update the banner text and optional image. “Shop Now” and “Get a Callback” stay on the banner automatically.</p>
@@ -76,6 +76,12 @@ body{background:#F3F6FA}.admin{max-width:none;margin:0;padding:0}.panel{backgrou
           <div class="field"><label for="freeDeliveryMinimum">Free delivery minimum order (₹, optional)</label><input id="freeDeliveryMinimum" type="number" min="0" step="1" placeholder="No minimum"></div>
           <div class="field"><label for="freeDeliveryEndsAt">Offer end date (optional)</label><input id="freeDeliveryEndsAt" type="datetime-local"></div>
           <div class="field wide"><label for="returnPolicyText">Return policy text (optional)</label><textarea id="returnPolicyText" maxlength="2000" placeholder="Leave blank until the business policy is confirmed."></textarea></div>
+          <div class="field"><label style="font-weight:500"><input id="returnsEnabled" type="checkbox"> Returns enabled</label></div>
+          <div class="field"><label for="returnWindowDays">Return window (days)</label><input id="returnWindowDays" type="number" min="0" max="90"></div>
+          <div class="field"><label for="returnShippingMode">Return shipping</label><select id="returnShippingMode"><option value="customer_ships">Customer ships at own cost</option><option value="deduct_from_refund">Deduct flat charge from refund</option></select></div>
+          <div class="field"><label for="returnShippingCharge">Return shipping charge (₹)</label><input id="returnShippingCharge" type="number" min="0" step="1"></div>
+          <div class="field"><label style="font-weight:500"><input id="refundOriginalDelivery" type="checkbox"> Refund original delivery</label></div>
+          <div class="field"><label for="refundProcessingDays">Refund processing days</label><input id="refundProcessingDays" type="number" min="0" max="90"></div>
           <div class="field"><label for="gstin">GSTIN (optional; not used in totals)</label><input id="gstin" maxlength="20"></div>
           <div class="field"><label for="gstRate">GST rate (optional; not used in totals)</label><input id="gstRate" type="number" min="0" max="100" step="0.01"></div>
         </div>
@@ -83,7 +89,7 @@ body{background:#F3F6FA}.admin{max-width:none;margin:0;padding:0}.panel{backgrou
         <div class="shipping-preview" id="shippingPreview" aria-live="polite"></div>
         <div class="actions"><button class="btn" type="submit">Save shipping settings</button><p class="status" id="shippingStatus" role="status"></p></div>
       </form>
-    </section></div><div class="admin-view" data-panel="orders"><section class="panel" id="ordersPanel">
+    </section></div><div class="admin-view" data-panel="returns"><section class="panel" id="returnsPanel"><h2>Return requests</h2><p class="hint">Review proof, approve or reject requests, record inspection, and issue server-computed refunds. Relist returned stock manually.</p><div id="returnList" class="admin-list"><p class="hint">Loading return requests...</p></div></section></div><div class="admin-view" data-panel="orders"><section class="panel" id="ordersPanel">
     <hr style="border:0;border-top:1px solid var(--line);margin:36px 0">
       <h2>Orders</h2><p class="hint">Review guest orders, verified payment status, and courier tracking. Payment status is confirmed only by verified Razorpay webhooks.</p>
       <form class="order-filters" id="orderFilters">
@@ -130,9 +136,11 @@ body{background:#F3F6FA}.admin{max-width:none;margin:0;padding:0}.panel{backgrou
     <h2 style="margin-top:32px">Current products</h2><div class="admin-list" id="adminProducts"><p class="hint">Loading products...</p></div>
   </section></div></div></div></div>
 </main>
+<footer class="site-footer"><small>Vansh Computer · <span id="adminAddress">Yashwantrao Chavan Rd, Sant Tukaram Nagar, Pimpri Colony, Pimpri-Chinchwad, Maharashtra 411018</span> · <span>+91 93561 14946</span> · <a href="terms.html">Terms</a> · <a href="privacy.html">Privacy</a> · <a href="refund-policy.html">Returns &amp; refunds</a> · <a href="shipping-policy.html">Shipping</a> · <a href="warranty-policy.html">Warranty</a></small></footer>
+<script src="js/business.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
-const listOf = (data) => Array.isArray(data) ? data : ((data && data.items) || []);
+const listOf = (data) => Array.isArray(data) ? data : (data && Array.isArray(data.items) ? data.items : []);
 let bannerImageUrl = '';
 let selectedImagePreviewUrl = '';
 let shopImageUrl = '';
@@ -149,6 +157,25 @@ async function request(path, options) {
   if (!response.ok) {
     const duplicate = data.fields && Object.entries(data.fields).map(([field, value]) => `${field}: ${value}`).join(', ');
     throw new Error(duplicate ? `${data.message || 'Duplicate value'} (${duplicate}). Is field ke liye alag value use karein.` : (data.message || 'Request failed'));
+  }
+  async function loadReturns() {
+    const list = $('returnList');
+    try {
+      const rows = await request('/api/orders/admin/returns');
+      const unread = rows.filter((item) => !item.adminSeenAt).length;
+      $('returnUnreadBadge').textContent = String(unread); $('returnUnreadBadge').hidden = unread === 0;
+      document.title = unread ? `(${unread}) Admin | Vansh Computer` : 'Admin | Vansh Computer';
+      list.replaceChildren(...rows.map((item) => {
+        const row = document.createElement('article'); row.className = 'admin-product';
+        row.innerHTML = `<div><strong>${item.requestNumber}</strong><br><small>${item.orderNumber} · ${item.reason} · ${item.status}</small><br><small>Refund: ₹${Number(item.refundAmount || 0).toLocaleString('en-IN')}</small></div>`;
+        const actions = document.createElement('div'); actions.className = 'admin-product-actions';
+        const action = (label, name, reasonRequired = false) => { const button = document.createElement('button'); button.type = 'button'; button.textContent = label; button.addEventListener('click', async () => { const reason = reasonRequired ? prompt('Reason') : ''; if (reasonRequired && !reason) return; try { await request(`/api/orders/admin/returns/${encodeURIComponent(item._id)}/${name}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) }); await loadReturns(); } catch (error) { alert(error.message); } }); actions.append(button); };
+        if (item.status === 'requested') { action('Approve', 'approve'); action('Reject', 'reject', true); }
+        if (item.status === 'received') { action('Accept inspection', 'inspection-accepted'); action('Reject inspection', 'inspection-rejected', true); }
+        if (item.status === 'inspection_accepted') action('Issue refund', 'refund');
+        row.append(actions); return row;
+      }));
+    } catch (error) { list.replaceChildren(Object.assign(document.createElement('p'), { className: 'status error', textContent: error.message })); }
   }
   return data;
 }
@@ -204,6 +231,12 @@ async function loadShippingSettings() {
   $('freeDeliveryMinimum').value = settings.freeDeliveryMinimum ?? '';
   $('freeDeliveryEndsAt').value = settings.freeDeliveryEndsAt ? new Date(settings.freeDeliveryEndsAt).toISOString().slice(0, 16) : '';
   $('returnPolicyText').value = settings.returnPolicyText || '';
+  $('returnsEnabled').checked = settings.returnsEnabled === true;
+  $('returnWindowDays').value = settings.returnWindowDays ?? '';
+  $('returnShippingMode').value = settings.returnShippingMode || 'customer_ships';
+  $('returnShippingCharge').value = settings.returnShippingCharge ?? '';
+  $('refundOriginalDelivery').checked = settings.refundOriginalDelivery === true;
+  $('refundProcessingDays').value = settings.refundProcessingDays ?? '';
   $('gstin').value = settings.gstin || '';
   $('gstRate').value = settings.gstRate ?? '';
   updateShippingPreview();
@@ -281,11 +314,11 @@ async function openEditor(user) {
     $('editor').style.display = 'block';
     await loadBanner();
     await loadSocialContent();
-    await Promise.all([loadShippingSettings(), loadOrders()]);
+    await Promise.all([loadShippingSettings(), loadOrders(), loadReturns()]);
   } else $('editor').style.display = 'none';
   await loadProducts();
 }
-const adminViewTitles = { banners: 'Banners', stories: 'Reviews & Reels', products: 'Products', shipping: 'Shipping settings', orders: 'Orders' };
+const adminViewTitles = { banners: 'Banners', stories: 'Reviews & Reels', products: 'Products', shipping: 'Shipping settings', orders: 'Orders', returns: 'Return requests' };
 function switchAdminView(name) {
   document.querySelectorAll('.admin-view').forEach(view => view.classList.toggle('active', view.dataset.panel === name));
   document.querySelectorAll('.sidebar nav a').forEach(link => link.classList.toggle('active', link.dataset.view === name));
@@ -309,6 +342,13 @@ $('shippingForm').addEventListener('submit', async (event) => {
     freeDeliveryEndsAt: $('freeDeliveryEndsAt').value ? new Date($('freeDeliveryEndsAt').value).toISOString() : null,
     returnPolicyText: $('returnPolicyText').value.trim(), gstin: $('gstin').value.trim(),
     gstRate: $('gstRate').value === '' ? null : Number($('gstRate').value),
+    returnsEnabled: $('returnsEnabled').checked,
+    returnWindowDays: $('returnWindowDays').value === '' ? null : Number($('returnWindowDays').value),
+    eligibleReasons: ['not_as_described', 'defective_or_not_working', 'damaged_in_transit', 'wrong_item'],
+    returnShippingMode: $('returnShippingMode').value,
+    returnShippingCharge: $('returnShippingCharge').value === '' ? null : Number($('returnShippingCharge').value),
+    refundOriginalDelivery: $('refundOriginalDelivery').checked,
+    refundProcessingDays: $('refundProcessingDays').value === '' ? null : Number($('refundProcessingDays').value),
   };
   try { await request('/api/orders/shipping', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); status.textContent = 'Shipping settings saved.'; updateShippingPreview(); }
   catch (error) { showError(status, error.message); }

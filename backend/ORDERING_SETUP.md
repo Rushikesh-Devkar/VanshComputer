@@ -8,11 +8,11 @@
 
 ## Configure and start
 
-1. From `backend`, copy `.env.example` to `.env` and set `MONGO_URI`, `JWT_SECRET`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, and `RAZORPAY_WEBHOOK_SECRET`. Keep `.env` local.
+1. From `backend`, copy `.env.example` to `.env` and set `MONGO_URI`, `JWT_SECRET`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, and `RAZORPAY_WEBHOOK_SECRET`. Optional owner alerts use `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`, and `OWNER_ALERT_EMAIL`. Use the credentials from the current Cloudinary account, keep `.env` local, and restart the backend after changing it.
 2. Set `PAYMENT_MODE=test`. `PAYMENT_RESERVATION_MINUTES` is optional and defaults to 15 (allowed range: 5–60).
 3. Install dependencies and run checks: `npm install`, then `npm test`.
 4. Start the app with `npm run dev`.
-5. Sign into `admin.html` with an owner or manager account. In Shipping Settings, configure the Maharashtra courier charge whenever free delivery has a minimum/end date or is turned off. Free delivery starts enabled with no minimum and no end date.
+5. Sign into `admin.html` with an owner or manager account. If no owner exists, create one from `backend` with `node scripts/createOwner.js owner@example.com "a-password-at-least-10-chars" "Owner"`. In Shipping Settings, configure the Maharashtra courier charge whenever free delivery has a minimum/end date or is turned off. Free delivery starts enabled with no minimum and no end date.
 6. In Razorpay Test Mode, configure the webhook URL as `https://<your-host>/api/orders/webhook` and subscribe to payment captured/failed, order paid, and refund processed/failed events. Keep the webhook secret in the server environment only.
 
 The cart quote and final order both use current MongoDB prices and server-side shipping settings. The final order reserves stock inside a transaction. A background worker and payment endpoints release unpaid reservations after the configured period. Customer tracking requires the order number and checkout mobile number. Admin order and shipping writes require owner/manager authentication.
@@ -37,5 +37,11 @@ After configuring Razorpay Test Mode and a reachable webhook endpoint, verify ma
 - Complete a Razorpay test payment; only the verified webhook changes status to paid. Replay a webhook event and verify it has no duplicate effect. Submit an invalid signature and verify rejection.
 - Test payment failure/expiry, late capture refund review, and a test-mode full refund.
 - Sign in as inventory/sales and verify order/shipping admin APIs deny access; verify owner/manager fulfillment updates and tracking fields.
+- In Shipping Settings, leave returns disabled until the policy and owner values are reviewed. Configure the return window, eligible reasons, return-shipping mode/charge, original-delivery refund choice, and refund processing days.
+- Mark a paid order delivered and verify `deliveredAt` is recorded. Track it with the customer phone, submit 2–6 valid proof images, and verify a duplicate open request is rejected.
+- As owner/manager, review the request, approve it, record receipt and inspection, then issue a partial refund. Verify the server-computed breakdown, the refund webhook amount match, and the mismatch path. Verify sales/inventory roles cannot list or modify returns.
+- Confirm rejected requests show their reason to the customer and that proof uploads use authenticated Cloudinary resources. No card data is stored by this application.
+
+Run `npm run check:site` before launch. It intentionally fails until every `[TO BE FILLED BY OWNER]` value in `frontend/js/business.js` and the policy pages has been replaced. Policy drafts need legal/CA review.
 
 Git ignores local environment and credential artifacts. Use `scripts/export-project.ps1` to create a ZIP from the working tree; it excludes local env files, credentials, build outputs, dependencies, and nested archives while retaining the sanitized `.env.example`. `.gitattributes` also marks sensitive paths `export-ignore` for Git archive exports. Files already present in older Git history still require rotation of any credentials they contained; this change does not rewrite repository history.

@@ -40,23 +40,37 @@ test('quote uses current database price and free delivery defaults', async () =>
 test('shipping charge applies when free delivery is off', async () => {
   mockQuoteData(baseProduct, { freeDeliveryEnabled: false, maharashtraCharge: 450 });
   const quote = await service.priceQuote([{ productId, quantity: 1 }], validAddress);
-  assert.equal(quote.shippingCharge, 450);
-  assert.equal(quote.total, 12950);
+    assert.equal(quote.shippingCharge, 550);
+  assert.equal(quote.total, 13050);
 });
 
 test('free-delivery minimum is evaluated using the current database subtotal', async () => {
   mockQuoteData(baseProduct, { freeDeliveryEnabled: true, freeDeliveryMinimum: 20000, maharashtraCharge: 350 });
   const below = await service.priceQuote([{ productId, quantity: 1 }], validAddress);
   const above = await service.priceQuote([{ productId, quantity: 2 }], validAddress);
-  assert.equal(below.shippingCharge, 350);
+    assert.equal(below.shippingCharge, 550);
   assert.equal(above.shippingCharge, 0);
   assert.equal(below.shippingRuleSnapshot.freeDeliveryApplied, false);
   assert.equal(above.shippingRuleSnapshot.freeDeliveryApplied, true);
 });
 
-test('shipping is not guessed when a non-free shipping price is not configured', async () => {
-  mockQuoteData(baseProduct, { freeDeliveryEnabled: false, maharashtraCharge: null });
-  await assert.rejects(service.priceQuote([{ productId, quantity: 1 }], validAddress), { status: 503 });
+test('free delivery ON with no minimum and no end date applies to every order', async () => {
+  mockQuoteData(baseProduct, { freeDeliveryEnabled: true, freeDeliveryMinimum: null, freeDeliveryEndsAt: null });
+  const quote = await service.priceQuote([{ productId, quantity: 1 }], validAddress);
+  assert.equal(quote.shippingCharge, 0);
+  assert.equal(quote.shippingRuleSnapshot.freeDeliveryApplied, true);
+});
+
+test('free delivery is applied by default when shipping settings were never saved', async () => {
+  mockQuoteData(baseProduct, null);
+  const quote = await service.priceQuote([{ productId, quantity: 1 }], validAddress);
+  assert.equal(quote.shippingCharge, 0);
+});
+
+test('an expired free delivery offer charges the courier rate', async () => {
+  mockQuoteData(baseProduct, { freeDeliveryEnabled: true, freeDeliveryMinimum: null, freeDeliveryEndsAt: new Date(Date.now() - 86400000) });
+  const quote = await service.priceQuote([{ productId, quantity: 1 }], validAddress);
+  assert.equal(quote.shippingCharge, 550);
 });
 
 test('quote rejects unavailable stock and refurbished quantity above one', async () => {
@@ -102,4 +116,29 @@ test('Razorpay signature verifier accepts only matching HMAC signatures', () => 
   const signature = crypto.createHmac('sha256', 'test-secret').update(message).digest('hex');
   assert.equal(controller.verifySignature(message, signature, 'test-secret'), true);
   assert.equal(controller.verifySignature(message, '0'.repeat(64), 'test-secret'), false);
+});
+
+test('payment.failed webhook keeps the reservation so the customer can retry in the same popup', async () => {
+  const crypto = require('node:crypto');
+  const WebhookEvent = require('../src/modules/orders/webhook-event.model');
+  process.env.RAZORPAY_WEBHOOK_SECRET = 'whsec_test';
+  const raw = Buffer.from(JSON.stringify({ event: 'payment.failed', payload: { payment: { entity: { id: 'pay_1', order_id: 'order_1', amount: 100, currency: 'INR' } } } }));
+  const signature = crypto.createHmac('sha256', 'whsec_test').update(raw).digest('hex');
+  const saved = { create: WebhookEvent.create, updateOne: WebhookEvent.updateOne, findOne: Order.findOne, orderUpdate: Order.updateOne, release: service.releaseReservation };
+  let released = false; let historyPushed = false;
+  WebhookEvent.create = async () => ({}); WebhookEvent.updateOne = async () => ({});
+  Order.findOne = async () => ({ _id: 'o1', status: 'pending_payment', total: 1, reservationExpiresAt: new Date(Date.now() + 60000) });
+  Order.updateOne = async (_f, update) => { if (update.$push && update.$push.statusHistory.action === 'payment_attempt_failed') historyPushed = true; return { modifiedCount: 1 }; };
+  service.releaseReservation = async () => { released = true; };
+  const headers = { 'x-razorpay-signature': signature, 'x-razorpay-event-id': 'evt_1' };
+  const req = { body: raw, get: (name) => headers[name.toLowerCase()] };
+  let body; const res = { json: (d) => { body = d; return res; }, status() { return res; }, send() { return res; } };
+  try {
+    await controller.webhook(req, res, (e) => { throw e; });
+    assert.equal(released, false);
+    assert.equal(historyPushed, true);
+    assert.deepEqual(body, { received: true });
+  } finally {
+    WebhookEvent.create = saved.create; WebhookEvent.updateOne = saved.updateOne; Order.findOne = saved.findOne; Order.updateOne = saved.orderUpdate; service.releaseReservation = saved.release;
+  }
 });

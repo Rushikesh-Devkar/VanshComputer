@@ -20,14 +20,29 @@ exports.customerSchema = z.object({
   email: z.union([z.string().trim().email().max(200), z.literal('')]).optional().default(''),
   gstin: z.string().trim().max(20).optional().default(''),
 }).strict();
+exports.policyConsentSchema = z.object({
+  termsAccepted: z.literal(true),
+  policyVersion: z.string().trim().min(1).max(20),
+}).strict();
 exports.shippingSettingsSchema = z.object({
   maharashtraCharge: z.number().int().min(0).nullable().optional().default(null),
   freeDeliveryEnabled: z.boolean(),
   freeDeliveryMinimum: z.number().int().min(0).nullable(),
   freeDeliveryEndsAt: z.union([z.string().datetime().transform((value) => new Date(value)), z.null()]),
   returnPolicyText: z.string().trim().max(2000),
+  returnsEnabled: z.boolean().optional().default(true),
+  returnWindowDays: z.number().int().min(0).max(90).optional().default(7),
+  returnShippingDeduction: z.number().min(0).optional().default(0),
   gstin: z.string().trim().max(20).optional().default(''),
   gstRate: z.number().min(0).max(100).nullable().optional().default(null),
+  returnsEnabled: z.boolean().default(false),
+  returnWindowDays: z.number().int().min(0).max(90).nullable(),
+  eligibleReasons: z.array(z.enum(['not_as_described', 'defective_or_not_working', 'damaged_in_transit', 'wrong_item'])).length(4),
+  returnShippingMode: z.enum(['customer_ships', 'deduct_from_refund']),
+  returnShippingCharge: z.number().min(0).nullable(),
+  refundOriginalDelivery: z.boolean(),
+  refundProcessingDays: z.number().int().min(0).max(90).nullable(),
+  gstCalculationEnabled: z.boolean().optional().default(false),
 }).strict();
 exports.trackingSchema = z.object({
   orderNumber: z.string().trim().regex(/^VC\d{8}-[A-F\d]{8}$/i),

@@ -12,7 +12,7 @@ const shippingClass = (product) => product.section === 'accessories' || product.
 const currentShipping = async (session) => {
   let query = ShippingSettings.findById('maharashtra');
   if (session) query = query.session(session);
-  return (await query.lean()) || { freeDeliveryEnabled: false, freeDeliveryMinimum: null, freeDeliveryEndsAt: null };
+  return (await query.lean()) || { freeDeliveryEnabled: true, freeDeliveryMinimum: null, freeDeliveryEndsAt: null };
 };
 
 exports.priceQuote = async (items, address, session) => {
@@ -45,8 +45,8 @@ exports.priceQuote = async (items, address, session) => {
   });
   const subtotal = lines.reduce((sum, line) => sum + line.lineTotal, 0);
   const settings = await currentShipping(session);
-  const offerHasScope = settings.freeDeliveryMinimum != null || settings.freeDeliveryEndsAt != null;
-  const offerActive = settings.freeDeliveryEnabled && offerHasScope && (!settings.freeDeliveryEndsAt || new Date(settings.freeDeliveryEndsAt) >= new Date());
+    // Offer ON ho to minimum aur end date optional hain: dono khali ho to sabhi orders free
+  const offerActive = settings.freeDeliveryEnabled === true && (!settings.freeDeliveryEndsAt || new Date(settings.freeDeliveryEndsAt) >= new Date());
   const qualifiesFree = offerActive && (settings.freeDeliveryMinimum == null || subtotal >= settings.freeDeliveryMinimum);
   const calculatedShipping = lines.reduce((sum, line) => sum + line.shippingTotal, 0);
   const shippingCharge = qualifiesFree ? 0 : calculatedShipping;
@@ -67,7 +67,7 @@ exports.priceQuote = async (items, address, session) => {
 
 exports.newOrderNumber = () => `VC${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
 
-exports.reserveAndCreate = async ({ customer, address, items, expectedTotal, reservationMinutes, accessTokenHash, checkoutRequestId }) => {
+exports.reserveAndCreate = async ({ customer, address, items, expectedTotal, reservationMinutes, accessTokenHash, checkoutRequestId, termsAccepted, policyVersion }) => {
   const session = await mongoose.startSession();
   let order;
   const orderNumber = exports.newOrderNumber();
@@ -91,6 +91,7 @@ exports.reserveAndCreate = async ({ customer, address, items, expectedTotal, res
         orderNumber, checkoutRequestId, customer, address, items: quote.items, subtotal: quote.subtotal,
         discount: quote.discount, shippingCharge: quote.shippingCharge,
         shippingRuleSnapshot: quote.shippingRuleSnapshot, total: quote.total,
+        termsAccepted, termsAcceptedAt: termsAccepted ? new Date() : null, policyVersion,
         accessTokenHash,
         taxSnapshot: { ...quote.taxSnapshot, buyerGstin: customer.gstin || '' },
         reservationExpiresAt: expiresAt,

@@ -39,6 +39,7 @@ app.use('/api/banner', require('./modules/banner/banner.routes'));
 app.use('/api/reviews', require('./modules/reviews/review.routes'));
 app.use('/api/reels', require('./modules/reels/reel.routes'));
 app.use('/api/orders', require('./modules/orders/orders.routes'));
+app.use('/api/orders', require('./modules/orders/return.routes'));
 
 app.use(notFound);
 app.use(errorHandler);

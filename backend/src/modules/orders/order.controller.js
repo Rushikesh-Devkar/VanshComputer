@@ -1,19 +1,26 @@
 const crypto = require('crypto');
 const { z } = require('zod');
 const Order = require('./order.model');
+const ReturnRequest = require('./return.model');
 const WebhookEvent = require('./webhook-event.model');
-const { itemsSchema, addressSchema, quoteAddressSchema, customerSchema, trackingSchema } = require('./schemas');
+const { itemsSchema, addressSchema, quoteAddressSchema, customerSchema, trackingSchema, policyConsentSchema } = require('./schemas');
 const { normalizeIndianPhone } = require('../../utils/phone');
 const service = require('./order.service');
 
 const reservationMinutes = () => Math.min(60, Math.max(5, Number(process.env.PAYMENT_RESERVATION_MINUTES) || 15));
-const gatewayReady = () => process.env.PAYMENT_MODE === 'test'
-  && /^rzp_test_[A-Za-z0-9]+$/.test(process.env.RAZORPAY_KEY_ID || '')
-  && !!process.env.RAZORPAY_KEY_SECRET && !!process.env.RAZORPAY_WEBHOOK_SECRET
-  && !/replace|placeholder|your_/i.test(process.env.RAZORPAY_KEY_ID || '')
-  && !/replace|placeholder|your_/i.test(process.env.RAZORPAY_KEY_SECRET || '')
-  && !/replace|placeholder|your_/i.test(process.env.RAZORPAY_WEBHOOK_SECRET || '')
-  && !/^rzp_live_/i.test(process.env.RAZORPAY_KEY_ID || '');
+// PAYMENT_MODE=test  -> sirf rzp_test_ keys chalengi (asli paisa nahi lagta)
+// PAYMENT_MODE=live  -> sirf rzp_live_ keys chalengi (asli paisa; Razorpay KYC approve hone ke baad hi)
+const gatewayReady = () => {
+  const mode = process.env.PAYMENT_MODE;
+  const keyId = process.env.RAZORPAY_KEY_ID || '';
+  const keyMatchesMode = (mode === 'test' && /^rzp_test_[A-Za-z0-9]+$/.test(keyId))
+    || (mode === 'live' && /^rzp_live_[A-Za-z0-9]+$/.test(keyId));
+  return keyMatchesMode
+    && !!process.env.RAZORPAY_KEY_SECRET && !!process.env.RAZORPAY_WEBHOOK_SECRET
+    && !/replace|placeholder|your_/i.test(keyId)
+    && !/replace|placeholder|your_/i.test(process.env.RAZORPAY_KEY_SECRET || '')
+    && !/replace|placeholder|your_/i.test(process.env.RAZORPAY_WEBHOOK_SECRET || '');
+};
 
 async function razorpayRequest(path, payload) {
   let response;
@@ -69,7 +76,7 @@ exports.create = async (req, res, next) => {
   let order, accessToken, checkoutRequestId;
   try {
     if (!gatewayReady()) return res.status(503).json({ message: 'Online payment is temporarily unavailable while the store completes Razorpay Test Mode and webhook setup. No order or payment has been created.' });
-    const input = z.object({ customer: customerSchema, address: addressSchema, items: itemsSchema, expectedTotal: z.number().finite().nonnegative(), checkoutRequestId: z.string().uuid(), accessToken: z.string().regex(/^[A-Za-z0-9_-]{43}$/) }).strict().parse(req.body);
+    const input = z.object({ customer: customerSchema, address: addressSchema, items: itemsSchema, expectedTotal: z.number().finite().nonnegative(), checkoutRequestId: z.string().uuid(), accessToken: z.string().regex(/^[A-Za-z0-9_-]{43}$/), ...policyConsentSchema.shape }).strict().parse(req.body);
     accessToken = input.accessToken;
     checkoutRequestId = input.checkoutRequestId;
     const accessTokenHash = crypto.createHash('sha256').update(accessToken).digest('hex');
@@ -84,6 +91,7 @@ exports.create = async (req, res, next) => {
     const reserved = await service.reserveAndCreate({
       customer: { ...input.customer, phone }, address,
       items: input.items, expectedTotal: input.expectedTotal, reservationMinutes: reservationMinutes(), accessTokenHash, checkoutRequestId,
+      termsAccepted: input.termsAccepted, policyVersion: input.policyVersion,
     });
     order = reserved.order;
     const gatewayOrder = await razorpayRequest('/orders', {
@@ -213,13 +221,18 @@ exports.webhook = async (req, res, next) => {
         await flagCaptureForRefund(order, paymentId, 'late_payment_capture', 'Captured after reservation ended; refund review required.');
       }
     } else if (order && eventName === 'payment.failed') {
-      await service.releaseReservation(order._id, 'payment_failed');
-    } else if (order && eventName === 'refund.processed') {
-      const fullAmount = refundEntity && Number(refundEntity.amount) === Math.round(order.total * 100) && refundEntity.currency === 'INR';
-      await Order.updateOne({ _id: order._id, status: 'refund_pending' }, {
-        $set: { status: fullAmount ? 'refunded' : 'refund_review', paymentStatus: fullAmount ? 'refunded' : 'refund_review', razorpayRefundId: refundEntity && refundEntity.id || '' },
-        $push: { statusHistory: { action: fullAmount ? 'refund_processed' : 'refund_amount_review', detail: fullAmount ? 'Verified full refund webhook.' : 'Refund amount or currency did not match the full order amount.', at: new Date() } },
+              await Order.updateOne({ _id: order._id, status: 'pending_payment' }, {
+        $push: { statusHistory: { action: 'payment_attempt_failed', detail: 'A payment attempt failed; customer may retry until the reservation ends.', at: new Date() } },
       });
+    } else if (order && eventName === 'refund.processed') {
+        const expectedRefund = order.refundExpectedAmount == null ? order.total : order.refundExpectedAmount;
+      const refundMatches = refundEntity && Number(refundEntity.amount) === Math.round(expectedRefund * 100) && refundEntity.currency === 'INR';
+      const fullAmount = refundMatches && expectedRefund === order.total;
+      await Order.updateOne({ _id: order._id, status: 'refund_pending' }, {
+        $set: { status: refundMatches ? (fullAmount ? 'refunded' : 'partially_refunded') : 'refund_review', paymentStatus: refundMatches ? (fullAmount ? 'refunded' : 'partially_refunded') : 'refund_review', razorpayRefundId: refundEntity && refundEntity.id || '' },
+        $push: { statusHistory: { action: refundMatches ? 'refund_processed' : 'refund_amount_review', detail: refundMatches ? 'Verified refund webhook amount.' : 'Refund amount or currency did not match the requested amount.', at: new Date() } },
+      });
+      if (refundMatches) await ReturnRequest.updateOne({ order: order._id, status: 'refund_pending' }, { $set: { status: 'refunded' }, $push: { statusHistory: { action: 'refunded', detail: 'Refund webhook verified.' } } });
     } else if (order && eventName === 'refund.failed') {
       await Order.updateOne({ _id: order._id, status: 'refund_pending' }, { $set: { status: 'refund_failed', paymentStatus: 'refund_failed', razorpayRefundId: refundEntity && refundEntity.id || '' }, $push: { statusHistory: { action: 'refund_failed', detail: 'Payment provider reported refund failure.', at: new Date() } } });
     }
@@ -238,12 +251,12 @@ exports.track = async (req, res, next) => {
     const phone = normalizeIndianPhone(input.phone);
     if (!phone) return res.status(404).json({ message: 'Order details could not be verified.' });
     const order = await Order.findOne({ orderNumber: input.orderNumber.toUpperCase(), 'customer.phone': phone })
-      .select('orderNumber status paymentStatus items total shippingCharge trackingNumber courierName createdAt updatedAt');
+      .select('orderNumber status paymentStatus items total shippingCharge trackingNumber courierName deliveredAt createdAt updatedAt');
     if (!order) return res.status(404).json({ message: 'Order details could not be verified.' });
     res.json({ orderNumber: order.orderNumber, status: order.status, paymentStatus: order.paymentStatus,
       items: order.items, total: order.total, shippingCharge: order.shippingCharge,
       trackingNumber: order.trackingNumber, courierName: order.courierName,
-      createdAt: order.createdAt, updatedAt: order.updatedAt });
+      deliveredAt: order.deliveredAt, createdAt: order.createdAt, updatedAt: order.updatedAt });
   } catch (error) { next(error); }
 };
 
@@ -283,6 +296,7 @@ exports.adminUpdate = async (req, res, next) => {
     if (input.status === 'cancelled') return res.status(409).json({ message: 'Paid orders require the verified refund action before cancellation.' });
     if (input.status === 'shipped' && (!input.courierName || !input.trackingNumber)) return res.status(400).json({ message: 'Courier name and tracking number are required before shipping.' });
     const update = { status: input.status };
+    if (input.status === 'delivered') update.deliveredAt = order.deliveredAt || new Date();
     if (input.courierName != null) update.courierName = input.courierName;
     if (input.trackingNumber != null) update.trackingNumber = input.trackingNumber;
     const updated = await Order.findOneAndUpdate({ _id: order._id, status: order.status }, {
@@ -306,7 +320,7 @@ exports.adminRefund = async (req, res, next) => {
     const refundFilter = { _id: order._id, status: order.status };
     if (order.status === 'refund_pending') refundFilter.refundRequestedAt = null;
     const refundStarted = await Order.findOneAndUpdate(refundFilter, {
-      $set: { status: 'refund_pending', paymentStatus: 'refund_pending', refundRequestedAt: new Date() },
+      $set: { status: 'refund_pending', paymentStatus: 'refund_pending', refundRequestedAt: new Date(), refundExpectedAmount: order.total },
       $push: { statusHistory: { action: 'refund_requested', actor: req.user._id, detail: 'Full refund requested in Razorpay test mode.' } },
     }, { new: true });
     if (!refundStarted) return res.status(409).json({ message: 'Refund status changed. Reload before retrying.' });

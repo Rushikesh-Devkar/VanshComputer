@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "node --test",
+    "check:site": "node scripts/checkSite.js",
     "dev": "nodemon src/server.js",
     "start": "node src/server.js"
   },

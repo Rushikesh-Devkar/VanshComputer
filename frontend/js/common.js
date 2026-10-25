@@ -1,10 +1,11 @@
-﻿const STORE = {
+const BUSINESS = window.BUSINESS;
+const STORE = {
   whatsapp: '919404048303',
-  phone: '+919404048303',
-  phoneLabel: '+91 94040 48303',
-  hours: 'Open daily · 10:00 AM–10:00 PM',
+  phone: BUSINESS.phone.replace(/\s/g, ''),
+  phoneLabel: BUSINESS.phone,
+  hours: BUSINESS.hours,
   areaShort: 'Sant Tukaram Nagar, Pimpri-Chinchwad',
-  addressFull: 'JRC9+J45, Yashwantrao Chavan Rd, Komal Gruh Rachana Society, Sant Tukaram Nagar, Pimpri Colony, Pimpri-Chinchwad, Maharashtra 411018',
+  addressFull: BUSINESS.storeAddress,
   mapsUrl: 'https://maps.app.goo.gl/LvvZbApBRxbzKYFV8?g_st=ic',
 };
 const rupee = (n) => '₹ ' + Number(n).toLocaleString('en-IN');
@@ -38,7 +39,7 @@ async function api(path, opts) {
 }
 
 // API kabhi array deta hai, kabhi { items: [...] } - dono chalenge
-const listOf = (d) => Array.isArray(d) ? d : ((d && d.items) || []);
+const listOf = (d) => Array.isArray(d) ? d : (d && Array.isArray(d.items) ? d.items : []);
 
 function productCard(p) {
   const cover = p.images && p.images[0];
@@ -99,7 +100,7 @@ function renderChrome() {
           '<a href="shop.html?type=refurbished">Refurbished Laptops</a><a href="shop.html?type=new">New Laptops</a>' +
           '<a href="shop.html?type=refurbished&maxPrice=20000">Under ₹20,000</a><a href="shop.html?type=refurbished&maxPrice=30000">Under ₹30,000</a></div></div>' +
         '<div class="dd"><button type="button" class="ddb">Services ' + ICON.chev + '</button><div class="ddm">' +
-          '<a href="services.html#laptop">Laptop Repair</a><a href="services.html#computer">Computer Repair</a><a href="services.html#macbook">MacBook Repair</a></div></div>' +
+          '<a href="/#repair-support">Laptop Repair</a><a href="/#repair-support">Computer Repair</a><a href="/#repair-support">MacBook Repair</a></div></div>' +
         '<a href="cart.html" id="cartNav" class="cart-link"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg><span class="cart-count">Cart (0)</span></a>' +
       '</nav>' +
     '</div></header>';
@@ -121,8 +122,9 @@ function renderChrome() {
       '<div><div class="footer-brand-header"><img src="img/logo.jpg" alt=""><b class="fb">VANSH COMPUTER</b></div><p>Certified refurbished and new laptops, with direct help from our team.</p><a class="footer-contact" href="tel:' + S.phone + '">' + ICON.phone + '<span>' + S.phoneLabel + '</span></a></div>' +
       '<div><b>Shop by need</b><a href="shop.html?type=refurbished">Refurbished Laptops</a><a href="shop.html?type=new">New Laptops</a><a href="shop.html?q=gaming">Gaming laptops</a><a href="shop.html?q=business">Business laptops</a><a href="shop.html?section=accessories">Accessories</a></div>' +
       '<div><b>Repair &amp; support</b><a href="/#repair-support">Repair services</a><a class="footer-contact" href="https://wa.me/' + S.whatsapp + '?text=' + encodeURIComponent('Hi, mujhe repair ya support chahiye') + '" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11.5a8 8 0 0 1-11.8 7L4 20l1.5-4.1A8 8 0 1 1 20 11.5Z"/><path d="M9 9c.6 2 2 3.4 4 4l1-1 2 1c-.2 1.4-1.2 2-2.4 1.8-3.3-.6-5.8-3.2-6.2-6.2C7.2 7.4 8 6.5 9.4 6.5L10.5 8 9 9Z"/></svg><span>WhatsApp support</span></a><a class="footer-contact" href="tel:' + S.phone + '">Call our team</a></div>' +
-      '<div><b>Visit our store</b><p>' + S.addressFull + '</p><p>' + S.hours + '</p><a href="' + S.mapsUrl + '" target="_blank" rel="noopener">Get directions ↗</a></div>' +
-    '</div><div class="wrap fcopy">© 2026 Vansh Computer. All rights reserved.</div></footer>';
+      '<div><b>Visit our store</b><p>' + BUSINESS.tradeName + '</p><p>' + S.addressFull + '</p><p>' + S.hours + '</p><p>' + BUSINESS.email + '</p><p>' + BUSINESS.gstin + '</p><a href="' + S.mapsUrl + '" target="_blank" rel="noopener">Get directions ↗</a></div>' +
+      '<div><b>Policies</b><a href="about.html">About</a><a href="contact.html">Contact</a><a href="terms.html">Terms</a><a href="privacy.html">Privacy</a><a href="shipping-policy.html">Shipping</a><a href="warranty-policy.html">Warranty</a><a href="refund-policy.html">Cancellation, Return &amp; Refund</a></div>' +
+    '</div><div class="wrap fcopy">© 2026 ' + BUSINESS.tradeName + '. All rights reserved.</div></footer>';
 }
 
 function getCart() {

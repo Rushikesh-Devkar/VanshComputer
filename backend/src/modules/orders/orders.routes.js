@@ -5,9 +5,9 @@ const c = require('./order.controller');
 const shipping = require('./shipping.controller');
 
 const quoteLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 60, message: { message: 'Too many price checks. Please try again later.' } });
-const checkoutLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 5, message: { message: 'Too many checkout attempts. Please try again later.' } });
-const verifyLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 8, message: { message: 'Too many payment verification attempts. Please try again later.' } });
-const trackingLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 5, message: { message: 'Too many tracking attempts. Please try again later.' } });
+const checkoutLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 20, message: { message: 'Too many checkout attempts. Please try again later.' } });
+const verifyLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 30, message: { message: 'Too many payment verification attempts. Please try again later.' } });
+const trackingLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 15, message: { message: 'Too many tracking attempts. Please try again later.' } });
 const receiptLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 15, message: { message: 'Too many order detail requests. Please try again later.' } });
 const managers = [requireAuth, requireRole('owner', 'manager')];
 
