@@ -34,6 +34,7 @@ async function api(path, opts) {
     const err = new Error((data && data.message) || 'Kuch galat hua, dobara try karo');
     err.data = data;
     err.status = res.status;
+    err.retryAfter = Number(res.headers.get('Retry-After') || res.headers.get('RateLimit-Reset')) || 0;
     throw err;
   }
   return data;

@@ -54,6 +54,7 @@
 @media(max-width:420px){.brands{gap:10px}.brands a{min-height:112px;padding:12px 8px}.brand-logo svg{height:40px}}
 .cb{background:var(--bg);border-radius:16px;padding:clamp(20px,4vw,36px);display:grid;gap:24px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));align-items:center;margin-top:40px}
 .cb form{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:10px}
+.cb #cbMsg{display:none;margin:0}.cb #cbMsg.error-visible{display:block;color:#d32f2f}.cb #cbMsg.success-visible{display:block;color:var(--accent)}
 .store{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
 .store>div{border:1px solid var(--line);border-radius:14px;padding:18px;line-height:1.8}
 .stories{margin:52px auto 0}.stories[hidden]{display:none}.story-subhead{margin:24px 0 14px;font-size:18px;font-weight:800}.reels-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;width:100%;max-width:1200px;margin:0 auto}.reel-card{width:100%;min-width:0;height:auto;overflow:hidden;border:1px solid var(--line);border-radius:14px;background:#fff;box-shadow:0 4px 18px rgba(15,23,42,.06)}.reel-card video{display:block;width:100%;height:auto;max-height:400px;aspect-ratio:9/16;object-fit:cover;background:#0f172a}.reel-video-fallback,.reel-status{padding:16px;color:var(--muted);font-size:14px;line-height:1.5}.reel-video-fallback{display:grid;place-items:center;min-height:180px;aspect-ratio:9/16;background:#f1f5f9;text-align:center}.reel-card>a{display:block;padding:12px;color:var(--accent);font-size:13px;font-weight:700}.reel-card p{margin:10px 12px 0;font-size:13px;line-height:1.5}.stories-reviews{columns:3 260px;column-gap:16px}.story-review{break-inside:avoid;margin:0 0 16px;padding:18px;border:1px solid var(--line);border-radius:14px;background:#fff}.story-review p{margin:10px 0;line-height:1.6;white-space:pre-line}.story-review img{width:72px;height:72px;object-fit:cover;border-radius:8px;margin:6px 6px 0 0}.story-stars{color:#E99A13;letter-spacing:2px}
@@ -152,10 +153,10 @@ Honest grades.
     </div>
     <form id="cbForm">
       <label for="cbPhone" style="font-weight:700;font-size:14px">Mobile number</label>
-      <input id="cbPhone" class="f" type="tel" placeholder="+91 XXXXX XXXXX" autocomplete="tel">
-      <label class="muted" style="display:flex;gap:10px;align-items:flex-start"><input id="cbConsent" type="checkbox" style="margin-top:3px;width:18px;height:18px">Mujhe call ya WhatsApp pe contact kiya jaye.</label>
+      <input id="cbPhone" class="f" type="tel" placeholder="+91 XXXXX XXXXX" autocomplete="tel" required maxlength="20" pattern="\s*(?:\+?91[\s-]?)?(?:0[\s-]?)?[6-9](?:[\s-]?[0-9]){9}\s*" title="Enter a valid 10-digit Indian mobile number, optionally with +91.">
+      <label class="muted" style="display:flex;gap:10px;align-items:flex-start"><input id="cbConsent" type="checkbox" required style="margin-top:3px;width:18px;height:18px">Mujhe call ya WhatsApp pe contact kiya jaye.</label>
       <button class="btn" type="submit" id="cbBtn">Request Callback</button>
-      <p id="cbMsg" class="muted" role="status"></p>
+      <p id="cbMsg" class="callback-message" role="alert" aria-live="assertive" hidden></p>
     </form>
   </section>
 
@@ -229,21 +230,30 @@ const latest = document.getElementById('latest');
   } catch (e) { latest.replaceChildren(h('p', { class: 'muted' }, e.message)); }
 })();
 
+let callbackRateLimited = false, callbackCooldownTimer;
 document.getElementById('cbForm').addEventListener('submit', async (ev) => {
   ev.preventDefault();
   const msg = document.getElementById('cbMsg'), btn = document.getElementById('cbBtn');
-  msg.textContent = ''; btn.disabled = true;
+  msg.textContent = ''; msg.hidden = true; msg.className = 'callback-message'; btn.disabled = true;
   try {
     const res = await api('/api/leads', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: document.getElementById('cbPhone').value, enquiryType: 'callback', source: 'homepage', contactConsent: document.getElementById('cbConsent').checked, marketingConsent: false }),
+      body: JSON.stringify({ phone: document.getElementById('cbPhone').value.trim(), enquiryType: 'callback', consent: { contactAllowed: document.getElementById('cbConsent').checked, marketingAllowed: false, purpose: 'callback', source: 'homepage' } }),
     });
-    msg.textContent = res.message;
+    msg.textContent = res.message; msg.className = 'callback-message success-visible'; msg.hidden = false;
     ev.target.reset();
   } catch (e) {
     msg.textContent = e.data && e.data.errors ? e.data.errors.map((x) => x.message).join(', ') : e.message;
-  } finally { btn.disabled = false; }
+    msg.className = 'callback-message error-visible'; msg.hidden = false;
+    if (e.status === 429) {
+      callbackRateLimited = true;
+      const seconds = Math.max(1, e.retryAfter || 900);
+      msg.textContent = e.message + ' Please wait ' + Math.ceil(seconds / 60) + ' minute(s) before trying again.';
+      clearTimeout(callbackCooldownTimer);
+      callbackCooldownTimer = setTimeout(() => { callbackRateLimited = false; btn.disabled = false; }, seconds * 1000);
+    }
+  } finally { if (!callbackRateLimited) btn.disabled = false; }
 });
 
 function storyReviewCard(review) {

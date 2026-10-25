@@ -7,6 +7,8 @@ const c = require('./lead.controller');
 const leadLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
   message: { message: 'Bahut zyada requests, thodi der baad try karo' },
 });
 
