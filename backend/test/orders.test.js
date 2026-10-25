@@ -118,6 +118,34 @@ test('Razorpay signature verifier accepts only matching HMAC signatures', () => 
   assert.equal(controller.verifySignature(message, '0'.repeat(64), 'test-secret'), false);
 });
 
+test('Live Razorpay configuration passes readiness checks without accepting test keys', () => {
+  const saved = {
+    mode: process.env.PAYMENT_MODE,
+    keyId: process.env.RAZORPAY_KEY_ID,
+    keySecret: process.env.RAZORPAY_KEY_SECRET,
+    webhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET,
+  };
+  try {
+    process.env.PAYMENT_MODE = 'live';
+    process.env.RAZORPAY_KEY_ID = 'rzp_live_example123';
+    process.env.RAZORPAY_KEY_SECRET = 'live-secret';
+    process.env.RAZORPAY_WEBHOOK_SECRET = 'webhook-secret';
+    assert.equal(controller.gatewayReady(), true);
+    process.env.RAZORPAY_KEY_ID = 'rzp_test_example123';
+    assert.equal(controller.gatewayReady(), false);
+  } finally {
+    for (const [key, value] of Object.entries({
+      PAYMENT_MODE: saved.mode,
+      RAZORPAY_KEY_ID: saved.keyId,
+      RAZORPAY_KEY_SECRET: saved.keySecret,
+      RAZORPAY_WEBHOOK_SECRET: saved.webhookSecret,
+    })) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+});
+
 test('payment.failed webhook keeps the reservation so the customer can retry in the same popup', async () => {
   const crypto = require('node:crypto');
   const WebhookEvent = require('../src/modules/orders/webhook-event.model');

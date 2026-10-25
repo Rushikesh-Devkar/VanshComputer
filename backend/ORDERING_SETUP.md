@@ -4,22 +4,22 @@
 
 - Node.js 20.19 or newer (required by the installed Mongoose major version).
 - MongoDB configured as a replica set. Checkout uses MongoDB transactions so the order and stock reservation commit together. MongoDB Atlas is already replica-set based; local MongoDB must start with `mongod --replSet rs0 --dbpath <data-directory>` and be initiated once with `mongosh --eval "rs.initiate()"`.
-- Razorpay test-mode API key ID, API key secret, and webhook secret. Live keys are rejected by the application.
+- Razorpay API key ID, API key secret, and webhook secret for the selected mode. The key prefix must match `PAYMENT_MODE`.
 
 ## Configure and start
 
 1. From `backend`, copy `.env.example` to `.env` and set `MONGO_URI`, `JWT_SECRET`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, and `RAZORPAY_WEBHOOK_SECRET`. Optional owner alerts use `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`, and `OWNER_ALERT_EMAIL`. Use the credentials from the current Cloudinary account, keep `.env` local, and restart the backend after changing it.
-2. Set `PAYMENT_MODE=test`. `PAYMENT_RESERVATION_MINUTES` is optional and defaults to 15 (allowed range: 5–60).
+2. Set `PAYMENT_MODE=test` for testing or `PAYMENT_MODE=live` for production. `PAYMENT_RESERVATION_MINUTES` is optional and defaults to 15 (allowed range: 5–60).
 3. Install dependencies and run checks: `npm install`, then `npm test`.
 4. Start the app with `npm run dev`.
 5. Sign into `admin.html` with an owner or manager account. If no owner exists, create one from `backend` with `node scripts/createOwner.js owner@example.com "a-password-at-least-10-chars" "Owner"`. In Shipping Settings, configure the Maharashtra courier charge whenever free delivery has a minimum/end date or is turned off. Free delivery starts enabled with no minimum and no end date.
-6. In Razorpay Test Mode, configure the webhook URL as `https://<your-host>/api/orders/webhook` and subscribe to payment captured/failed, order paid, and refund processed/failed events. Keep the webhook secret in the server environment only.
+6. In the selected Razorpay mode, configure the webhook URL as `https://<your-host>/api/orders/webhook` and subscribe to payment captured/failed, order paid, and refund processed/failed events. Keep the webhook secret in the server environment only.
 
 The cart quote and final order both use current MongoDB prices and server-side shipping settings. The final order reserves stock inside a transaction. A background worker and payment endpoints release unpaid reservations after the configured period. Customer tracking requires the order number and checkout mobile number. Admin order and shipping writes require owner/manager authentication.
 
 ## Payment and tax behavior
 
-The API creates Razorpay orders server-side in paise. Browser callbacks are signature-checked but do not mark an order paid; verified webhooks make that transition. If test credentials are absent or incomplete, checkout returns a setup message and creates no order or reservation.
+The API creates Razorpay orders server-side in paise. Browser callbacks are signature-checked but do not mark an order paid; verified webhooks make that transition. If credentials are absent, incomplete, or mismatched with `PAYMENT_MODE`, checkout returns a setup message and creates no order or reservation.
 
 Seller GSTIN, optional buyer GSTIN, product HSN codes, and a configured rate are stored as invoice setup fields only. Tax is not calculated, and the customer confirmation page is an order receipt, not a GST tax invoice. Configure and verify the business GSTIN, product HSN classifications, applicable tax rates, and place-of-supply treatment before enabling invoice calculations. Return policy text is configurable in Shipping Settings and starts blank.
 

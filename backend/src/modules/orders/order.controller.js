@@ -22,6 +22,13 @@ const gatewayReady = () => {
     && !/replace|placeholder|your_/i.test(process.env.RAZORPAY_WEBHOOK_SECRET || '');
 };
 
+const paymentSetupMessage = (action) => {
+  const mode = process.env.PAYMENT_MODE === 'live' ? 'Live' : 'Test';
+  return `${action} payment is temporarily unavailable while the store completes Razorpay ${mode} Mode and webhook setup. No order or payment has been created.`;
+};
+
+exports.gatewayReady = gatewayReady;
+
 async function razorpayRequest(path, payload) {
   let response;
   try {
@@ -75,7 +82,7 @@ function paymentOrderPayload(order, accessToken, pendingProviderReconciliation =
 exports.create = async (req, res, next) => {
   let order, accessToken, checkoutRequestId;
   try {
-    if (!gatewayReady()) return res.status(503).json({ message: 'Online payment is temporarily unavailable while the store completes Razorpay Test Mode and webhook setup. No order or payment has been created.' });
+    if (!gatewayReady()) return res.status(503).json({ message: paymentSetupMessage('Online') });
     const input = z.object({ customer: customerSchema, address: addressSchema, items: itemsSchema, expectedTotal: z.number().finite().nonnegative(), checkoutRequestId: z.string().uuid(), accessToken: z.string().regex(/^[A-Za-z0-9_-]{43}$/), ...policyConsentSchema.shape }).strict().parse(req.body);
     accessToken = input.accessToken;
     checkoutRequestId = input.checkoutRequestId;
@@ -102,7 +109,10 @@ exports.create = async (req, res, next) => {
       const error = new Error('Payment provider returned an invalid order. Please contact the store.'); error.status = 502; throw error;
     }
     order.razorpayOrderId = gatewayOrder.id;
-    order.statusHistory.push({ action: 'payment_order_created', detail: 'Razorpay test order created.' });
+    order.statusHistory.push({
+      action: 'payment_order_created',
+      detail: `Razorpay ${process.env.PAYMENT_MODE === 'live' ? 'live' : 'test'} order created.`,
+    });
     try { await order.save(); }
     catch (error) { error.uncertain = true; throw error; }
     res.status(201).json(paymentOrderPayload(order, accessToken));
@@ -139,7 +149,7 @@ const verifyPaymentSchema = z.object({
 }).strict();
 exports.verifyPayment = async (req, res, next) => {
   try {
-    if (!gatewayReady()) return res.status(503).json({ message: 'Test payment is not configured.' });
+    if (!gatewayReady()) return res.status(503).json({ message: paymentSetupMessage('Online') });
     const input = verifyPaymentSchema.parse(req.body);
     const order = await Order.findOne({ orderNumber: req.params.orderNumber, razorpayOrderId: input.razorpay_order_id });
     if (!order) return res.status(404).json({ message: 'Order not found.' });
