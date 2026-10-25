@@ -1,0 +1,10 @@
+const router = require('express').Router();
+const rateLimit = require('express-rate-limit');
+const { requireAuth, requireRole } = require('../../middleware/auth');
+const c = require('./customer.controller');
+const limit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, message: { message: 'Too many account attempts. Please try again later.' } });
+router.post('/register', limit, c.register);
+router.post('/login', limit, c.login);
+router.get('/me', requireAuth, requireRole('customer'), c.me);
+router.patch('/me', requireAuth, requireRole('customer'), c.update);
+module.exports = router;

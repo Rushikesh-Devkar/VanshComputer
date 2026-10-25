@@ -33,6 +33,7 @@ app.use(cookieParser());
 
 app.get('/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
 app.use('/api/auth', require('./modules/auth/auth.routes'));
+app.use('/api/customer', require('./modules/auth/customer.routes'));
 app.use('/api/products', require('./modules/products/product.routes'));
 app.use('/api/leads', require('./modules/leads/lead.routes'));
 app.use('/api/banner', require('./modules/banner/banner.routes'));

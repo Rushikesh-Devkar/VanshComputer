@@ -67,7 +67,7 @@ exports.priceQuote = async (items, address, session) => {
 
 exports.newOrderNumber = () => `VC${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
 
-exports.reserveAndCreate = async ({ customer, address, items, expectedTotal, reservationMinutes, accessTokenHash, checkoutRequestId, termsAccepted, policyVersion }) => {
+exports.reserveAndCreate = async ({ customer, customerAccountId, address, items, expectedTotal, reservationMinutes, accessTokenHash, checkoutRequestId, termsAccepted, policyVersion }) => {
   const session = await mongoose.startSession();
   let order;
   const orderNumber = exports.newOrderNumber();
@@ -88,7 +88,7 @@ exports.reserveAndCreate = async ({ customer, address, items, expectedTotal, res
       }
       const expiresAt = new Date(Date.now() + reservationMinutes * 60 * 1000);
       [order] = await Order.create([{
-        orderNumber, checkoutRequestId, customer, address, items: quote.items, subtotal: quote.subtotal,
+        orderNumber, checkoutRequestId, customer, customerAccount: customerAccountId, address, items: quote.items, subtotal: quote.subtotal,
         discount: quote.discount, shippingCharge: quote.shippingCharge,
         shippingRuleSnapshot: quote.shippingRuleSnapshot, total: quote.total,
         termsAccepted, termsAcceptedAt: termsAccepted ? new Date() : null, policyVersion,

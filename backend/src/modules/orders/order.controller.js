@@ -106,6 +106,8 @@ exports.create = async (req, res, next) => {
       return res.status(503).json({ message: paymentSetupMessage('Online') });
     }
     const input = z.object({ customer: customerSchema, address: addressSchema, items: itemsSchema, expectedTotal: z.number().finite().nonnegative(), checkoutRequestId: z.string().uuid(), accessToken: z.string().regex(/^[A-Za-z0-9_-]{43}$/), ...policyConsentSchema.shape }).strict().parse(req.body);
+    if (!req.user || req.user.role !== 'customer') return res.status(403).json({ message: 'Sign in to your customer account before placing an order.' });
+    if (input.customer.email.toLowerCase() !== req.user.email) return res.status(400).json({ message: 'Use the email address linked to your account.' });
     accessToken = input.accessToken;
     checkoutRequestId = input.checkoutRequestId;
     const accessTokenHash = crypto.createHash('sha256').update(accessToken).digest('hex');
@@ -118,7 +120,7 @@ exports.create = async (req, res, next) => {
     if (!phone) return res.status(400).json({ message: 'Enter a valid Indian mobile number.' });
     const address = { ...input.address, state: 'Maharashtra' };
     const reserved = await service.reserveAndCreate({
-      customer: { ...input.customer, phone }, address,
+      customer: { ...input.customer, phone }, customerAccountId: req.user._id, address,
       items: input.items, expectedTotal: input.expectedTotal, reservationMinutes: reservationMinutes(), accessTokenHash, checkoutRequestId,
       termsAccepted: input.termsAccepted, policyVersion: input.policyVersion,
     });
@@ -147,6 +149,15 @@ exports.create = async (req, res, next) => {
     if (order && !error.uncertain) await service.releaseReservation(order._id, 'payment_failed').catch(() => console.error('Reservation rollback failed.'));
     next(error);
   }
+};
+
+exports.accountOrders = async (req, res, next) => {
+  try {
+    const orders = await Order.find({ customerAccount: req.user._id })
+      .select('orderNumber status paymentStatus total currency createdAt updatedAt')
+      .sort({ createdAt: -1 }).limit(50).lean();
+    res.json({ items: orders });
+  } catch (error) { next(error); }
 };
 
 exports.receipt = async (req, res, next) => {

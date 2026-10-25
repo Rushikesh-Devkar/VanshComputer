@@ -40,6 +40,7 @@ const orderSchema = new mongoose.Schema({
     email: { type: String, default: '' },
     gstin: { type: String, default: '' },
   },
+  customerAccount: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null, index: true },
   address: { type: addressSchema, required: true },
   items: { type: [orderItemSchema], required: true },
   subtotal: { type: Number, required: true, min: 0 },
