@@ -8,18 +8,36 @@ const { normalizeIndianPhone } = require('../../utils/phone');
 const service = require('./order.service');
 
 const reservationMinutes = () => Math.min(60, Math.max(5, Number(process.env.PAYMENT_RESERVATION_MINUTES) || 15));
-// PAYMENT_MODE=test  -> sirf rzp_test_ keys chalengi (asli paisa nahi lagta)
-// PAYMENT_MODE=live  -> sirf rzp_live_ keys chalengi (asli paisa; Razorpay KYC approve hone ke baad hi)
-const gatewayReady = () => {
-  const mode = process.env.PAYMENT_MODE;
+// .env / Render mein copy-paste se aksar extra space ya capital letter aa jata hai (jaise "Live " ya key ke aage space).
+// Isliye ek baar trim karke aur mode ko lowercase karke wapas set kar dete hain; baaki saara code isi saaf value ko use karta hai.
+for (const name of ['PAYMENT_MODE', 'RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET', 'RAZORPAY_WEBHOOK_SECRET']) {
+  if (typeof process.env[name] === 'string') process.env[name] = process.env[name].trim();
+}
+if (process.env.PAYMENT_MODE) process.env.PAYMENT_MODE = process.env.PAYMENT_MODE.toLowerCase();
+
+const looksLikePlaceholder = (value) => /replace|placeholder|your_/i.test(value);
+
+// Har check alag-alag (sirf true/false aur mode ka naam; secret ki value kabhi print nahi hoti).
+const gatewayDiagnostics = () => {
+  const mode = process.env.PAYMENT_MODE || '';
   const keyId = process.env.RAZORPAY_KEY_ID || '';
-  const keyMatchesMode = (mode === 'test' && /^rzp_test_[A-Za-z0-9]+$/.test(keyId))
-    || (mode === 'live' && /^rzp_live_[A-Za-z0-9]+$/.test(keyId));
-  return keyMatchesMode
-    && !!process.env.RAZORPAY_KEY_SECRET && !!process.env.RAZORPAY_WEBHOOK_SECRET
-    && !/replace|placeholder|your_/i.test(keyId)
-    && !/replace|placeholder|your_/i.test(process.env.RAZORPAY_KEY_SECRET || '')
-    && !/replace|placeholder|your_/i.test(process.env.RAZORPAY_WEBHOOK_SECRET || '');
+  const keySecret = process.env.RAZORPAY_KEY_SECRET || '';
+  const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET || '';
+  return {
+    mode: mode || '(not set)',
+    modeIsTestOrLive: mode === 'test' || mode === 'live',
+    keyPrefixMatchesMode: (mode === 'test' && /^rzp_test_[A-Za-z0-9]+$/.test(keyId))
+      || (mode === 'live' && /^rzp_live_[A-Za-z0-9]+$/.test(keyId)),
+    hasKeySecret: !!keySecret,
+    hasWebhookSecret: !!webhookSecret,
+    noPlaceholders: ![keyId, keySecret, webhookSecret].some(looksLikePlaceholder),
+  };
+};
+
+// PAYMENT_MODE=test -> sirf rzp_test_ key | PAYMENT_MODE=live -> sirf rzp_live_ key
+const gatewayReady = () => {
+  const d = gatewayDiagnostics();
+  return d.modeIsTestOrLive && d.keyPrefixMatchesMode && d.hasKeySecret && d.hasWebhookSecret && d.noPlaceholders;
 };
 
 const paymentSetupMessage = (action) => {
@@ -82,17 +100,11 @@ function paymentOrderPayload(order, accessToken, pendingProviderReconciliation =
 exports.create = async (req, res, next) => {
   let order, accessToken, checkoutRequestId;
   try {
-     console.log("RAZORPAY_CONFIG_CHECK", {
-      modeIsLive: process.env.PAYMENT_MODE === "live",
-      keyHasLivePrefix: (process.env.RAZORPAY_KEY_ID || "").startsWith("rzp_live_"),
-      apiSecretPresent: !!process.env.RAZORPAY_KEY_SECRET,
-      webhookSecretPresent: !!process.env.RAZORPAY_WEBHOOK_SECRET,
-      keyFormatValid: /^rzp_live_[A-Za-z0-9]+$/.test(
-        process.env.RAZORPAY_KEY_ID || ""
-      ),
-    });
-
-    if (!gatewayReady()) return res.status(503).json({ message: paymentSetupMessage('Online') });
+    if (!gatewayReady()) {
+      // Sirf server log mein dikhega (Render > Logs): kaunsa check fail hua. Secret ki value print nahi hoti.
+      console.warn('PAYMENT_NOT_READY', gatewayDiagnostics());
+      return res.status(503).json({ message: paymentSetupMessage('Online') });
+    }
     const input = z.object({ customer: customerSchema, address: addressSchema, items: itemsSchema, expectedTotal: z.number().finite().nonnegative(), checkoutRequestId: z.string().uuid(), accessToken: z.string().regex(/^[A-Za-z0-9_-]{43}$/), ...policyConsentSchema.shape }).strict().parse(req.body);
     accessToken = input.accessToken;
     checkoutRequestId = input.checkoutRequestId;
@@ -241,11 +253,12 @@ exports.webhook = async (req, res, next) => {
         await flagCaptureForRefund(order, paymentId, 'late_payment_capture', 'Captured after reservation ended; refund review required.');
       }
     } else if (order && eventName === 'payment.failed') {
-              await Order.updateOne({ _id: order._id, status: 'pending_payment' }, {
+      // Customer isi popup mein dobara try kar sakta hai. Isliye stock abhi release nahi karte.
+      await Order.updateOne({ _id: order._id, status: 'pending_payment' }, {
         $push: { statusHistory: { action: 'payment_attempt_failed', detail: 'A payment attempt failed; customer may retry until the reservation ends.', at: new Date() } },
       });
     } else if (order && eventName === 'refund.processed') {
-        const expectedRefund = order.refundExpectedAmount == null ? order.total : order.refundExpectedAmount;
+      const expectedRefund = order.refundExpectedAmount == null ? order.total : order.refundExpectedAmount;
       const refundMatches = refundEntity && Number(refundEntity.amount) === Math.round(expectedRefund * 100) && refundEntity.currency === 'INR';
       const fullAmount = refundMatches && expectedRefund === order.total;
       await Order.updateOne({ _id: order._id, status: 'refund_pending' }, {
@@ -283,7 +296,7 @@ exports.track = async (req, res, next) => {
 exports.adminList = async (req, res, next) => {
   try {
     const filter = {};
-    if (req.query.status) filter.status = z.enum(['pending_payment', 'paid', 'processing', 'shipped', 'delivered', 'payment_failed', 'cancelled', 'expired', 'refund_pending', 'refund_review', 'refunded', 'refund_failed']).parse(req.query.status);
+    if (req.query.status) filter.status = z.enum(['pending_payment', 'paid', 'processing', 'shipped', 'delivered', 'payment_failed', 'cancelled', 'expired', 'refund_pending', 'refund_review', 'refunded', 'partially_refunded', 'refund_failed']).parse(req.query.status);
     if (req.query.from || req.query.to) {
       filter.createdAt = {};
       if (req.query.from) filter.createdAt.$gte = new Date(z.string().datetime().parse(req.query.from));
@@ -330,7 +343,7 @@ exports.adminUpdate = async (req, res, next) => {
 
 exports.adminRefund = async (req, res, next) => {
   try {
-    if (!gatewayReady()) return res.status(503).json({ message: 'Razorpay test mode is not configured.' });
+    if (!gatewayReady()) return res.status(503).json({ message: 'Razorpay is not configured.' });
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ message: 'Order not found.' });
     if (!['paid', 'processing', 'refund_failed', 'refund_pending'].includes(order.status) || !order.razorpayPaymentId) {
@@ -341,7 +354,7 @@ exports.adminRefund = async (req, res, next) => {
     if (order.status === 'refund_pending') refundFilter.refundRequestedAt = null;
     const refundStarted = await Order.findOneAndUpdate(refundFilter, {
       $set: { status: 'refund_pending', paymentStatus: 'refund_pending', refundRequestedAt: new Date(), refundExpectedAmount: order.total },
-      $push: { statusHistory: { action: 'refund_requested', actor: req.user._id, detail: 'Full refund requested in Razorpay test mode.' } },
+      $push: { statusHistory: { action: 'refund_requested', actor: req.user._id, detail: 'Full refund requested.' } },
     }, { new: true });
     if (!refundStarted) return res.status(409).json({ message: 'Refund status changed. Reload before retrying.' });
     const refund = await razorpayRequest(`/payments/${encodeURIComponent(order.razorpayPaymentId)}/refund`, {
