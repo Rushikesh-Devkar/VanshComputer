@@ -82,12 +82,13 @@ async function processForgotPassword(email) {
     if (mailer.isMailConfigured()) {
       const safeName = escapeHtml(user.name || '');
       const safeLink = escapeHtml(link);
-      await mailer.sendMail({
+      const sent = await mailer.sendMail({
         to: user.email,
         subject: 'Reset your Vansh Computer password',
         text: `A password reset was requested for your Vansh Computer account. Use this link within 30 minutes:\n\n${link}\n\nIf you did not request this, ignore this email.`,
         html: `<p>A password reset was requested for your Vansh Computer account${safeName ? `, ${safeName}` : ''}.</p><p><a href="${safeLink}">Reset your password</a></p><p>This link is valid for 30 minutes.</p><p>If you did not request this, ignore this email.</p>`,
       });
+      if (!sent) console.warn('Password reset email was not sent.');
     } else if (process.env.NODE_ENV === 'production') {
       mailer.warnMailNotConfigured();
     } else {

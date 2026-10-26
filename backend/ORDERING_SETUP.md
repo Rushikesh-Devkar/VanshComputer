@@ -26,7 +26,7 @@ The cart quote and final order both use current MongoDB prices and server-side s
 
 ### Password reset email setup
 
-- For local development, leave SMTP unconfigured and copy the development-only reset link from the backend console. To exercise actual delivery, use a test SMTP account such as Mailtrap and set all SMTP and sender variables above.
+- For local development, leave SMTP unconfigured and copy the development-only reset link from the backend console. To exercise actual delivery, use a test SMTP account such as Mailtrap and set all SMTP and sender variables above. If SMTP is configured but delivery fails, the backend logs the SMTP error code/response while the browser still receives the generic response.
 - Before production, verify the sending domain's SPF and DKIM DNS records, use a dedicated sender address, set `APP_BASE_URL` to the HTTPS site origin, and test delivery to a real mailbox. Check spam folders during testing.
 - Keep SMTP credentials out of source control and logs. Rotate the SMTP password immediately if it is ever exposed.
 - `POST /api/customer/logout` clears the customer cookie; `/api/auth/logout` clears the staff cookie.

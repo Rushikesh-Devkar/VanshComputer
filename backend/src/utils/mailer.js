@@ -33,8 +33,11 @@ async function sendMail({ to, subject, text, html }) {
   try {
     await createTransport().sendMail({ from: env('MAIL_FROM'), to, subject, text, html });
     return true;
-  } catch (_) {
-    console.warn('Email delivery failed.');
+  } catch (error) {
+    const details = [error.code, error.responseCode, error.command, error.message]
+      .filter(Boolean)
+      .join(' ');
+    console.warn(`Email delivery failed${details ? `: ${details}` : '.'}`);
     return false;
   }
 }
