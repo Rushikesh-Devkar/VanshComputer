@@ -26,6 +26,84 @@ function response() {
   };
 }
 
+test('Brevo API path sends the payload with a timeout and never logs secrets', async () => {
+  const originalBrevoKey = process.env.BREVO_API_KEY;
+  const originalMailFrom = process.env.MAIL_FROM;
+  const originalWarn = console.warn;
+  const originalFetch = global.fetch;
+  const calls = [];
+  const warnings = [];
+
+  process.env.BREVO_API_KEY = 'test-brevo-key';
+  process.env.MAIL_FROM = 'Vansh Computer <noreply@example.com>';
+  console.warn = (...args) => warnings.push(args.join(' '));
+  global.fetch = async (url, options) => {
+    calls.push({ url, options });
+    assert.equal(url, 'https://api.brevo.com/v3/smtp/email');
+    assert.equal(options.method, 'POST');
+    assert.equal(options.headers['api-key'], 'test-brevo-key');
+    assert.equal(options.headers['Content-Type'], 'application/json');
+    assert.ok(options.signal instanceof AbortSignal);
+    const body = JSON.parse(options.body);
+    assert.equal(body.sender.name, 'Vansh Computer');
+    assert.equal(body.sender.email, 'noreply@example.com');
+    assert.deepEqual(body.to, [{ email: 'buyer@example.test' }]);
+    assert.match(body.subject, /Reset your Vansh Computer password/i);
+    assert.match(body.htmlContent, /Reset your password/);
+    assert.match(body.textContent, /Use this link within 30 minutes/);
+    return { ok: true, status: 201 };
+  };
+
+  try {
+    assert.equal(mailer.isMailConfigured(), true);
+    const sent = await mailer.sendMail({
+      to: 'buyer@example.test',
+      subject: 'Reset your Vansh Computer password',
+      text: 'A password reset was requested. Use this link within 30 minutes:\n\nhttps://example.test/reset-password.html?token=secret-token\n\nIf you did not request this, ignore this email.',
+      html: '<p>Use this link within 30 minutes: <a href="https://example.test/reset-password.html?token=secret-token">Reset your password</a></p>',
+    });
+    assert.equal(sent, true);
+    assert.equal(calls.length, 1);
+    assert.deepEqual(warnings, []);
+  } finally {
+    process.env.BREVO_API_KEY = originalBrevoKey;
+    process.env.MAIL_FROM = originalMailFrom;
+    console.warn = originalWarn;
+    global.fetch = originalFetch;
+  }
+});
+
+test('Brevo API failures log only the HTTP status and never leak secrets', async () => {
+  const originalBrevoKey = process.env.BREVO_API_KEY;
+  const originalMailFrom = process.env.MAIL_FROM;
+  const originalWarn = console.warn;
+  const originalFetch = global.fetch;
+  const warnings = [];
+
+  process.env.BREVO_API_KEY = 'test-brevo-key';
+  process.env.MAIL_FROM = 'Vansh Computer <noreply@example.com>';
+  console.warn = (...args) => warnings.push(args.join(' '));
+  global.fetch = async () => ({ ok: false, status: 401, text: async () => 'Unauthorized' });
+
+  try {
+    const sent = await mailer.sendMail({
+      to: 'buyer@example.test',
+      subject: 'Reset your Vansh Computer password',
+      text: 'A password reset was requested. Use this link within 30 minutes: https://example.test/reset-password.html?token=secret-token',
+      html: '<p>Use this link within 30 minutes: https://example.test/reset-password.html?token=secret-token</p>',
+    });
+    assert.equal(sent, false);
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0], /HTTP 401/);
+    assert.doesNotMatch(warnings[0], /test-brevo-key|buyer@example.test|secret-token|noreply@example.com/);
+  } finally {
+    process.env.BREVO_API_KEY = originalBrevoKey;
+    process.env.MAIL_FROM = originalMailFrom;
+    console.warn = originalWarn;
+    global.fetch = originalFetch;
+  }
+});
+
 test('forgot-password persists only a hashed token and emails a base-URL link', async () => {
   const saved = [];
   const user = { email: 'buyer@example.test', name: 'Buyer <Customer>', async save() { saved.push({ ...this }); } };
