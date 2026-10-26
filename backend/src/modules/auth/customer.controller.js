@@ -3,13 +3,18 @@ const jwt = require('jsonwebtoken');
 const { z } = require('zod');
 const User = require('./user.model');
 const crypto = require('crypto');
+const mailer = require('../../utils/mailer');
 const DUMMY_HASH = bcrypt.hashSync('dummy-password', 12);
+const emailResetAttempts = new Map();
+const RESET_RESPONSE = 'If an account exists for that email, we have sent a reset link. Check your inbox and spam folder.';
 
 const credentials = z.object({
   email: z.string().trim().email().max(200).transform((value) => value.toLowerCase()),
   password: z.string().min(10).max(100),
 }).strict();
 const loginCredentials = credentials.extend({ password: z.string().min(1).max(100) });
+const emailInput = z.object({ email: z.string().trim().email().max(200).transform((value) => value.toLowerCase()) }).strict();
+const newPasswordInput = z.string().min(10).max(100);
 const cookieOptions = () => ({ httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', maxAge: 12 * 60 * 60 * 1000 });
 const publicAccount = (user) => ({ id: user._id, name: user.name, email: user.email });
 
@@ -48,23 +53,76 @@ exports.changePassword = async (req, res, next) => {
 };
 exports.forgotPassword = async (req, res, next) => {
   try {
-    const { email } = z.object({ email: z.string().trim().email().max(200).transform(v => v.toLowerCase()) }).strict().parse(req.body);
-    const user = await User.findOne({ email, role: 'customer' }).select('+resetTokenHash +resetTokenExpires');
-    if (user) {
-      const token = crypto.randomBytes(32).toString('hex'); user.resetTokenHash = crypto.createHash('sha256').update(token).digest('hex'); user.resetTokenExpires = new Date(Date.now() + 30 * 60 * 1000); await user.save();
-      if (process.env.NODE_ENV !== 'production') console.info('Customer password reset link:', `${process.env.CLIENT_ORIGIN || 'http://localhost:4000'}/reset-password.html?token=${token}`);
-      // TODO: Send this link through the configured mail service when customer mail delivery is added.
-    }
-    res.json({ message: 'If an account exists for that email, password reset instructions have been sent.' });
+    const { email } = emailInput.parse(req.body);
+    const now = Date.now();
+    for (const [key, entry] of emailResetAttempts) if (entry.expiresAt <= now) emailResetAttempts.delete(key);
+    const attempt = emailResetAttempts.get(email);
+    if (attempt && attempt.count >= 3 && attempt.expiresAt > now) return res.json({ message: RESET_RESPONSE });
+    if (emailResetAttempts.size > 10000) emailResetAttempts.clear();
+    emailResetAttempts.set(email, attempt && attempt.expiresAt > now
+      ? { count: attempt.count + 1, expiresAt: attempt.expiresAt }
+      : { count: 1, expiresAt: now + 60 * 60 * 1000 });
+    res.json({ message: RESET_RESPONSE });
+    setImmediate(() => processForgotPassword(email));
   } catch (error) { next(error); }
 };
+
+const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+
+async function processForgotPassword(email) {
+  try {
+    const user = await User.findOne({ email, role: 'customer' }).select('+resetTokenHash +resetTokenExpires');
+    if (!user) return;
+    const token = crypto.randomBytes(32).toString('hex');
+    user.resetTokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    user.resetTokenExpires = new Date(Date.now() + 30 * 60 * 1000);
+    await user.save();
+    const baseUrl = String(process.env.APP_BASE_URL || 'http://localhost:4000').trim().replace(/\/+$/, '');
+    const link = `${baseUrl}/reset-password.html?token=${token}`;
+    if (mailer.isMailConfigured()) {
+      const safeName = escapeHtml(user.name || '');
+      const safeLink = escapeHtml(link);
+      await mailer.sendMail({
+        to: user.email,
+        subject: 'Reset your Vansh Computer password',
+        text: `A password reset was requested for your Vansh Computer account. Use this link within 30 minutes:\n\n${link}\n\nIf you did not request this, ignore this email.`,
+        html: `<p>A password reset was requested for your Vansh Computer account${safeName ? `, ${safeName}` : ''}.</p><p><a href="${safeLink}">Reset your password</a></p><p>This link is valid for 30 minutes.</p><p>If you did not request this, ignore this email.</p>`,
+      });
+    } else if (process.env.NODE_ENV === 'production') {
+      mailer.warnMailNotConfigured();
+    } else {
+      console.info('Development-only password reset link:', link);
+    }
+  } catch (_) {
+    console.warn('Password reset processing failed.');
+  }
+}
+
+async function sendPasswordChangedEmail(user) {
+  if (!mailer.isMailConfigured()) {
+    if (process.env.NODE_ENV === 'production') mailer.warnMailNotConfigured();
+    return;
+  }
+  await mailer.sendMail({
+    to: user.email,
+    subject: 'Your Vansh Computer password was changed',
+    text: 'The password for your Vansh Computer account was changed. If you did not make this change, contact Vansh Computer support.',
+    html: '<p>The password for your Vansh Computer account was changed.</p><p>If you did not make this change, contact Vansh Computer support.</p>',
+  });
+}
 exports.resetPassword = async (req, res, next) => {
   try {
-    const input = z.object({ token: z.string().min(32).max(200), password: z.string().min(10).max(100) }).strict().parse(req.body);
+    const input = z.object({ token: z.string().min(32).max(200), password: newPasswordInput }).strict().parse(req.body);
     const hash = crypto.createHash('sha256').update(input.token).digest('hex');
     const user = await User.findOne({ role: 'customer', resetTokenHash: hash, resetTokenExpires: { $gt: new Date() } }).select('+resetTokenHash +resetTokenExpires +passwordHash');
-    if (!user) return res.status(400).json({ message: 'Reset link is invalid or expired.' });
-    user.passwordHash = await bcrypt.hash(input.password, 12); user.resetTokenHash = undefined; user.resetTokenExpires = undefined; await user.save(); res.json({ message: 'Password reset. You can sign in now.' });
+    if (!user) return res.status(400).json({ message: 'This reset link is invalid or expired. Request a new one and try again.' });
+    user.passwordHash = await bcrypt.hash(input.password, 12);
+    user.passwordChangedAt = new Date();
+    user.resetTokenHash = undefined;
+    user.resetTokenExpires = undefined;
+    await user.save();
+    res.json({ message: 'Password reset. You can sign in now.' });
+    setImmediate(() => sendPasswordChangedEmail(user).catch(() => console.warn('Password confirmation email failed.')));
   } catch (error) { next(error); }
 };
 

@@ -6,6 +6,7 @@ const userSchema = new mongoose.Schema({
   passwordHash: { type: String, required: true, select: false },
   resetTokenHash: { type: String, select: false },
   resetTokenExpires: { type: Date, select: false },
+  passwordChangedAt: { type: Date },
   role: { type: String, enum: ['owner', 'manager', 'sales', 'inventory', 'customer'], default: 'sales' },
   active: { type: Boolean, default: true },
 }, { timestamps: true });

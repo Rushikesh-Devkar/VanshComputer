@@ -1,8 +1,13 @@
 const app = require('./app');
 const connectDB = require('./config/db');
 const { expireReservations } = require('./modules/orders/order.service');
+const mailer = require('./utils/mailer');
 
 const PORT = process.env.PORT || 4000;
+
+if (process.env.NODE_ENV === 'production' && !mailer.isMailConfigured()) {
+  mailer.warnMailNotConfigured();
+}
 
 connectDB()
   .then(() => {

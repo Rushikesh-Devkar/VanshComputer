@@ -8,7 +8,7 @@
 
 ## Configure and start
 
-1. From `backend`, copy `.env.example` to `.env` and set `MONGO_URI`, `JWT_SECRET`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, and `RAZORPAY_WEBHOOK_SECRET`. Optional owner alerts use `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`, and `OWNER_ALERT_EMAIL`. Use the credentials from the current Cloudinary account, keep `.env` local, and restart the backend after changing it.
+1. From `backend`, copy `.env.example` to `.env` and set `MONGO_URI`, `JWT_SECRET`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, and `RAZORPAY_WEBHOOK_SECRET`. Configure email with `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE` (`true` or `false`), `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM`, and `APP_BASE_URL`. `APP_BASE_URL` must be the public site origin in production and is never taken from the incoming request. Optional owner alerts use `OWNER_ALERT_EMAIL`. Keep `.env` local and restart the backend after changing it.
 2. Set `PAYMENT_MODE=test` for testing or `PAYMENT_MODE=live` for production. `PAYMENT_RESERVATION_MINUTES` is optional and defaults to 15 (allowed range: 5–60).
 3. Install dependencies and run checks: `npm install`, then `npm test`.
 4. Start the app with `npm run dev`.
@@ -22,7 +22,13 @@ The cart quote and final order both use current MongoDB prices and server-side s
 - Staff sessions use the `token` HTTP-only cookie; customer sessions use `ctoken`. Both cookies are independent. Customer routes verify the customer role on the backend.
 - Sign in at `/api/customer/login` (or register at `/api/customer/register`). `GET /api/orders/mine` lists the customer's orders; `GET /api/orders/mine/:orderNumber` returns one owned order's details; `POST /api/orders/track` accepts only `{ "orderNumber": "VC..." }` and uses the customer session.
 - Create a return with `POST /api/orders/:orderNumber/returns` as multipart form data (`reason`, `details`, 2–6 `proof` images, optional `video`). Check requests with `GET /api/orders/returns/mine` or `POST /api/orders/returns/:requestNumber/status`. Both are scoped to the signed-in account.
-- Password reset uses `POST /api/customer/forgot-password` with email and `POST /api/customer/reset-password` with token and a 10+ character password. Links expire after 30 minutes. Without a configured mail service, development logs the reset link to the server console; the request response is generic. Signed-in customers can use `POST /api/customer/change-password` with current and new passwords.
+- Password reset uses `POST /api/customer/forgot-password` with email and `POST /api/customer/reset-password` with token and a 10+ character password. Links expire after 30 minutes, the raw token is never stored, and each successful reset invalidates earlier customer sessions. Reset and password-change confirmation emails use the configured SMTP sender. The forgot-password response stays generic for unknown accounts and requests are rate limited by IP and email. If SMTP is not configured, development logs a reset link for local testing only; production never logs reset links and prints a generic configuration warning.
+
+### Password reset email setup
+
+- For local development, leave SMTP unconfigured and copy the development-only reset link from the backend console. To exercise actual delivery, use a test SMTP account such as Mailtrap and set all SMTP and sender variables above.
+- Before production, verify the sending domain's SPF and DKIM DNS records, use a dedicated sender address, set `APP_BASE_URL` to the HTTPS site origin, and test delivery to a real mailbox. Check spam folders during testing.
+- Keep SMTP credentials out of source control and logs. Rotate the SMTP password immediately if it is ever exposed.
 - `POST /api/customer/logout` clears the customer cookie; `/api/auth/logout` clears the staff cookie.
 
 ## Payment and tax behavior

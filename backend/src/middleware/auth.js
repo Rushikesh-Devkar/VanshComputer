@@ -8,6 +8,9 @@ const authenticate = (kind = 'staff') => async (req, res, next) => {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(payload.sub);
     if (!user || !user.active) return res.status(401).json({ message: 'Login required' });
+    if (kind === 'customer' && user.passwordChangedAt && payload.iat * 1000 < user.passwordChangedAt.getTime()) {
+      return res.status(401).json({ message: 'Password changed. Please sign in again.' });
+    }
     req.user = user;
     next();
   } catch (e) {
