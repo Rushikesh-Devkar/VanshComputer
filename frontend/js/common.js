@@ -1,4 +1,4 @@
-const BUSINESS = window.BUSINESS;
+﻿const BUSINESS = window.BUSINESS;
 const STORE = {
   whatsapp: '919404048303',
   phone: BUSINESS.phone.replace(/\s/g, ''),
@@ -27,7 +27,7 @@ function h(tag, attrs, ...kids) {
 }
 
 async function api(path, opts) {
-  const res = await fetch(path, opts);
+   const res = await fetch(path, Object.assign({ cache: 'no-store', credentials: 'same-origin' }, opts));
   let data = null;
   try { data = await res.json(); } catch (_) {}
   if (!res.ok) {
