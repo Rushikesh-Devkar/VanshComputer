@@ -156,7 +156,9 @@ async function request(path, options) {
   try { data = await response.json(); } catch (_) {}
   if (!response.ok) {
     const duplicate = data.fields && Object.entries(data.fields).map(([field, value]) => `${field}: ${value}`).join(', ');
-    throw new Error(duplicate ? `${data.message || 'Duplicate value'} (${duplicate}). Is field ke liye alag value use karein.` : (data.message || 'Request failed'));
+    const error = new Error(duplicate ? `${data.message || 'Duplicate value'} (${duplicate}). Is field ke liye alag value use karein.` : (data.message || 'Request failed'));
+    error.status = response.status;
+    throw error;
   }
   async function loadReturns() {
     const list = $('returnList');
@@ -178,6 +180,13 @@ async function request(path, options) {
     } catch (error) { list.replaceChildren(Object.assign(document.createElement('p'), { className: 'status error', textContent: error.message })); }
   }
   return data;
+}
+function showLoginPanel(message = '') {
+  $('dashboard').style.display = 'none';
+  $('loginPanel').style.display = 'block';
+  $('logout').hidden = true;
+  if (message) showError($('loginStatus'), message);
+  location.hash = 'loginPanel';
 }
 function setPreview(banner) {
   bannerImageUrl = banner.imageUrl || '';
@@ -443,7 +452,15 @@ async function loadProducts() {
       });
       actions.append(edit, archive); row.append(info, actions); return row;
     }));
-  } catch (error) { container.textContent = error.message; }
+  } catch (error) {
+    container.replaceChildren(Object.assign(document.createElement('p'), {
+      className: 'status error',
+      textContent: error.status === 401 || error.status === 403
+        ? 'Your admin session has expired. Please log in again.'
+        : `Failed to load products: ${error.message}`
+    }));
+    if (error.status === 401 || error.status === 403) showLoginPanel();
+  }
 }
 
 async function loadSocialContent() {
@@ -555,7 +572,12 @@ $('productForm').addEventListener('submit', async (event) => {
   finally { button.disabled = false; }
 });
 $('logout').addEventListener('click', async () => { await request('/api/auth/logout', { method: 'POST' }); location.reload(); });
-(async () => { try { await openEditor(await request('/api/auth/me')); } catch (_) { /* login form stays visible */ } })();
+(async () => {
+  try { await openEditor(await request('/api/auth/me')); }
+  catch (error) {
+    showLoginPanel(error.status === 401 || error.status === 403 ? '' : error.message);
+  }
+})();
 </script>
 </body>
 </html>
