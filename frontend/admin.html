@@ -319,13 +319,11 @@ async function openEditor(user) {
   const owner = ['owner', 'manager'].includes(user.role);
   document.querySelectorAll('[data-owner-only]').forEach(link => { link.hidden = !owner; });
   if (!owner) switchAdminView('products'); else switchAdminView('banners');
+  await loadProducts();
   if (owner) {
     $('editor').style.display = 'block';
-    await loadBanner();
-    await loadSocialContent();
-    await Promise.all([loadShippingSettings(), loadOrders(), loadReturns()]);
+    await Promise.allSettled([loadBanner(), loadSocialContent(), loadShippingSettings(), loadOrders(), loadReturns()]);
   } else $('editor').style.display = 'none';
-  await loadProducts();
 }
 const adminViewTitles = { banners: 'Banners', stories: 'Reviews & Reels', products: 'Products', shipping: 'Shipping settings', orders: 'Orders', returns: 'Return requests' };
 function switchAdminView(name) {
