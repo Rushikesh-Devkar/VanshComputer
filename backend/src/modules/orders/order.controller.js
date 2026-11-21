@@ -11,12 +11,10 @@ const { escapeHtml, appAdminUrl, notifyOwner } = require('../../utils/ownerAlert
 const orderMails = require('../../utils/orderMails');
 
 const reservationMinutes = () => Math.min(60, Math.max(5, Number(process.env.PAYMENT_RESERVATION_MINUTES) || 15));
-// .env / Render mein copy-paste se aksar extra space ya capital letter aa jata hai (jaise "Live " ya key ke aage space).
-// Isliye ek baar trim karke aur mode ko lowercase karke wapas set kar dete hain; baaki saara code isi saaf value ko use karta hai.
+// Environment normalization is performed by src/config/env.js when the app loads.
 for (const name of ['PAYMENT_MODE', 'RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET', 'RAZORPAY_WEBHOOK_SECRET']) {
   if (typeof process.env[name] === 'string') process.env[name] = process.env[name].trim();
 }
-if (process.env.PAYMENT_MODE) process.env.PAYMENT_MODE = process.env.PAYMENT_MODE.toLowerCase();
 
 const looksLikePlaceholder = (value) => /replace|placeholder|your_/i.test(value);
 

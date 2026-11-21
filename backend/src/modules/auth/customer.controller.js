@@ -5,6 +5,7 @@ const User = require('./user.model');
 const crypto = require('crypto');
 const mailer = require('../../utils/mailer');
 const { escapeHtml } = require('../../utils/ownerAlerts');
+const { isProd } = require('../../config/env');
 const DUMMY_HASH = bcrypt.hashSync('dummy-password', 12);
 const emailResetAttempts = new Map();
 const RESET_RESPONSE = 'If an account exists for that email, we have sent a reset link. Check your inbox and spam folder.';
@@ -16,7 +17,7 @@ const credentials = z.object({
 const loginCredentials = credentials.extend({ password: z.string().min(1).max(100) });
 const emailInput = z.object({ email: z.string().trim().email().max(200).transform((value) => value.toLowerCase()) }).strict();
 const newPasswordInput = z.string().min(10).max(100);
-const cookieOptions = () => ({ httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', maxAge: 12 * 60 * 60 * 1000 });
+const cookieOptions = () => ({ httpOnly: true, sameSite: 'lax', secure: isProd(), maxAge: 12 * 60 * 60 * 1000 });
 const publicAccount = (user) => ({ id: user._id, name: user.name, email: user.email });
 
 exports.register = async (req, res, next) => {
@@ -43,7 +44,7 @@ exports.login = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
-exports.logout = (req, res) => { res.clearCookie('ctoken', { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production' }); res.json({ message: 'Logged out' }); };
+exports.logout = (req, res) => { res.clearCookie('ctoken', { httpOnly: true, sameSite: 'lax', secure: isProd() }); res.json({ message: 'Logged out' }); };
 exports.changePassword = async (req, res, next) => {
   try {
     const input = z.object({ currentPassword: z.string().min(1), newPassword: z.string().min(10).max(100) }).strict().parse(req.body);
@@ -88,7 +89,7 @@ async function processForgotPassword(email) {
         html: `<p>A password reset was requested for your Vansh Computer account${safeName ? `, ${safeName}` : ''}.</p><p><a href="${safeLink}">Reset your password</a></p><p>This link is valid for 30 minutes.</p><p>If you did not request this, ignore this email.</p>`,
       });
       if (!sent) console.warn('Password reset email was not sent.');
-    } else if (process.env.NODE_ENV === 'production') {
+    } else if (isProd()) {
       mailer.warnMailNotConfigured();
     } else {
       console.info('Development-only password reset link:', link);
@@ -100,7 +101,7 @@ async function processForgotPassword(email) {
 
 async function sendPasswordChangedEmail(user) {
   if (!mailer.isMailConfigured()) {
-    if (process.env.NODE_ENV === 'production') mailer.warnMailNotConfigured();
+    if (isProd()) mailer.warnMailNotConfigured();
     return;
   }
   await mailer.sendMail({
@@ -127,6 +128,8 @@ exports.resetPassword = async (req, res, next) => {
 };
 
 exports.me = (req, res) => res.json(publicAccount(req.user));
+
+exports.cookieOptions = cookieOptions;
 
 exports.update = async (req, res, next) => {
   try {

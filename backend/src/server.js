@@ -1,11 +1,12 @@
 const app = require('./app');
+const { isProd } = require('./config/env');
 const connectDB = require('./config/db');
 const { expireReservations } = require('./modules/orders/order.service');
 const mailer = require('./utils/mailer');
 
 const PORT = process.env.PORT || 4000;
 
-if (process.env.NODE_ENV === 'production' && !mailer.isMailConfigured()) {
+if (isProd() && !mailer.isMailConfigured()) {
   mailer.warnMailNotConfigured();
 }
 

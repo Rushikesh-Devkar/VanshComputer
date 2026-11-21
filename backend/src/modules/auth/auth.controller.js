@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { z } = require('zod');
 const User = require('./user.model');
+const { isProd } = require('../../config/env');
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -14,7 +15,7 @@ const DUMMY_HASH = bcrypt.hashSync('dummy-password', 12);
 const cookieOptions = () => ({
   httpOnly: true,
   sameSite: 'lax',
-  secure: process.env.NODE_ENV === 'production',
+  secure: isProd(),
   maxAge: 12 * 60 * 60 * 1000, // 12 ghante
 });
 
@@ -33,7 +34,7 @@ exports.login = async (req, res, next) => {
 };
 
 exports.logout = (req, res) => {
-  res.clearCookie('token', { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production' });
+  res.clearCookie('token', { httpOnly: true, sameSite: 'lax', secure: isProd() });
   res.json({ message: 'Logged out' });
 };
 
@@ -41,3 +42,5 @@ exports.me = (req, res) => {
   const u = req.user;
   res.json({ id: u._id, name: u.name, email: u.email, role: u.role });
 };
+
+exports.cookieOptions = cookieOptions;

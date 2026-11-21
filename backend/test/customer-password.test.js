@@ -9,6 +9,8 @@ const mailer = require('../src/utils/mailer');
 const customer = require('../src/modules/auth/customer.controller');
 const auth = require('../src/middleware/auth');
 const customerRoutes = require('../src/modules/auth/customer.routes');
+const authController = require('../src/modules/auth/auth.controller');
+const { normalizeEnv } = require('../src/config/env');
 
 const originalEnv = {};
 for (const key of ['NODE_ENV', 'APP_BASE_URL', 'JWT_SECRET']) originalEnv[key] = process.env[key];
@@ -183,6 +185,20 @@ test('production without SMTP does not log a reset link', async () => {
     mailer.isMailConfigured = originalIsConfigured;
     mailer.warnMailNotConfigured = originalWarn;
     console.info = originalInfo;
+  }
+});
+
+test('capitalized NODE_ENV production produces secure auth cookies', () => {
+  const original = process.env.NODE_ENV;
+  try {
+    process.env.NODE_ENV = 'PRODUCTION';
+    normalizeEnv();
+    assert.equal(process.env.NODE_ENV, 'production');
+    assert.equal(authController.cookieOptions().secure, true);
+    assert.equal(customer.cookieOptions().secure, true);
+  } finally {
+    process.env.NODE_ENV = original;
+    normalizeEnv();
   }
 });
 
