@@ -13,5 +13,6 @@ router.post('/returns/:requestNumber/status', returnLimit, requireAuth('customer
 router.post('/:orderNumber/returns', returnLimit, requireAuth('customer'), requireRole('customer'), upload.fields([{ name: 'proof', maxCount: 6 }, { name: 'video', maxCount: 1 }]), (req, res, next) => { req.files = [...(req.files && req.files.proof || []), ...(req.files && req.files.video || [])]; next(); }, c.create);
 router.get('/admin/returns', ...managers, c.list);
 router.get('/admin/returns/:id', ...managers, c.detail);
+router.get('/admin/returns/:id/proofs', ...managers, c.proofs);
 router.patch('/admin/returns/:id/:action', ...managers, c.action);
 module.exports = router;

@@ -86,7 +86,48 @@ exports.mine = async (req, res, next) => { try {
 } catch (error) { next(error); } };
 
 exports.list = async (req, res, next) => { try { res.json(await ReturnRequest.find({}).sort({ createdAt: -1 }).limit(200).select('-proofs')); } catch (error) { next(error); } };
-exports.detail = async (req, res, next) => { try { const value = await ReturnRequest.findById(req.params.id).populate('order'); if (!value) return res.status(404).json({ message: 'Return request not found.' }); res.json(value); } catch (error) { next(error); } };
+exports.detail = async (req, res, next) => {
+  try {
+    const value = await ReturnRequest.findById(req.params.id).select('-proofs').populate('order');
+    if (!value) return res.status(404).json({ message: 'Return request not found.' });
+    const settings = await service.getSettings();
+    const order = value.order;
+    const deliveryDeducted = settings.refundOriginalDelivery ? 0 : Number(order.shippingCharge || 0);
+    const returnChargeDeducted = value.returnChargeDeducted != null
+      ? Number(value.returnChargeDeducted)
+      : (settings.returnShippingMode === 'deduct_from_refund' ? Number(settings.returnShippingCharge || 0) : 0);
+    res.json({
+      ...value.toObject(),
+      refundBreakdown: {
+        orderTotal: Number(order.total || 0),
+        deliveryDeducted,
+        returnChargeDeducted,
+        refundAmount: Number(value.refundAmount || 0),
+      },
+    });
+  } catch (error) { next(error); }
+};
+
+exports.proofs = async (req, res, next) => {
+  try {
+    cloudinary.assertConfigured();
+    const request = await ReturnRequest.findById(req.params.id).select('proofs');
+    if (!request) return res.status(404).json({ message: 'Return request not found.' });
+    const expiresAt = Math.floor(Date.now() / 1000) + 600;
+    const proofs = (request.proofs || []).map((proof) => ({
+      resourceType: proof.resourceType,
+      bytes: proof.bytes,
+      url: cloudinary.url(proof.publicId, {
+        type: 'authenticated',
+        resource_type: proof.resourceType,
+        sign_url: true,
+        secure: true,
+        expires_at: expiresAt,
+      }),
+    }));
+    res.json({ proofs, expiresAt });
+  } catch (error) { next(error); }
+};
 
 const returnTransitions = {
   seen: ['requested', 'approved', 'rejected', 'awaiting_return_shipment', 'return_in_transit', 'received', 'inspection_accepted', 'inspection_rejected', 'refund_pending', 'refunded', 'closed'],

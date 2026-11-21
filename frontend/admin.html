@@ -17,6 +17,7 @@ body{background:#F3F6FA}.admin{max-width:none;margin:0;padding:0}.panel{backgrou
 .social-list{display:grid;gap:10px;margin:16px 0}.social-row{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:14px;border:1px solid var(--line);border-radius:12px}.social-row p{margin:5px 0;color:var(--muted);font-size:14px;line-height:1.5}.social-row video{width:72px;max-height:128px;object-fit:cover;border-radius:8px;background:#111}.social-actions{display:flex;gap:8px;flex-wrap:wrap}.social-actions button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 11px;font:inherit;font-weight:700;cursor:pointer}.social-actions button:hover{border-color:var(--accent);color:var(--accent)}.admin .field input[type=file]{padding:10px}
 @media(max-width:600px){.social-row{align-items:flex-start;flex-direction:column}.social-row video{width:100%;max-width:160px}}
 @media(max-width:760px){.admin-topbar{grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:8px;padding:0 12px}.admin-brand{font-size:11px;gap:6px}.admin-brand span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.admin-brand img{width:28px;height:28px}.admin-topbar h1{font-size:14px}.admin-topbar #logout{padding:8px 9px;font-size:12px;white-space:nowrap}.dashboard-layout{flex-direction:column}.sidebar{flex:0 0 auto;width:100%;height:auto;overflow-x:auto;overflow-y:hidden;padding:10px 12px;overscroll-behavior:contain}.sidebar-brand{display:none}.sidebar-label{display:none}.sidebar nav{display:flex;gap:5px;overflow-x:auto;overscroll-behavior:contain}.sidebar nav a{flex:none;white-space:nowrap;padding:9px 11px}.dashboard-main{flex:1;min-height:0;overflow-y:auto;padding:20px 14px 40px}}
+.return-modal{width:min(960px,calc(100vw - 30px));max-height:calc(100vh - 30px);border:1px solid var(--line);border-radius:16px;padding:0}.return-modal::backdrop{background:rgba(15,23,42,.55)}.return-modal-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,.8fr);gap:18px;padding:22px}.return-modal-header{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.return-modal-header h2{margin:0}.return-proof-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}.return-proof-grid img,.return-proof-grid video{width:100%;max-height:260px;object-fit:contain;border:1px solid var(--line);border-radius:10px;background:#f8fafc}.return-detail-block{padding:14px;border:1px solid var(--line);border-radius:10px}.return-detail-block p{margin:6px 0}.return-detail-actions{display:flex;gap:8px;flex-wrap:wrap}.return-detail-actions button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 12px;cursor:pointer}@media(max-width:760px){.return-modal-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -136,6 +137,10 @@ body{background:#F3F6FA}.admin{max-width:none;margin:0;padding:0}.panel{backgrou
     <h2 style="margin-top:32px">Current products</h2><div class="admin-list" id="adminProducts"><p class="hint">Loading products...</p></div>
   </section></div></div></div></div>
 </main>
+<dialog class="return-modal" id="returnDetailModal">
+  <div class="return-modal-header" style="padding:18px 22px 0"><h2>Return details</h2><button type="button" class="admin-product-actions" id="closeReturnDetail">Close</button></div>
+  <div class="return-modal-grid" id="returnDetailGrid"></div>
+</dialog>
 <footer class="site-footer"><small>Vansh Computer · <span id="adminAddress">Yashwantrao Chavan Rd, Sant Tukaram Nagar, Pimpri Colony, Pimpri-Chinchwad, Maharashtra 411018</span> · <span>+91 93561 14946</span> · <a href="terms.html">Terms</a> · <a href="privacy.html">Privacy</a> · <a href="refund-policy.html">Returns &amp; refunds</a> · <a href="shipping-policy.html">Shipping</a> · <a href="warranty-policy.html">Warranty</a></small></footer>
 <script src="js/business.js"></script>
 <script>
@@ -294,6 +299,129 @@ async function loadOrders() {
     }));
   } catch (error) { container.replaceChildren(Object.assign(document.createElement('p'), { className: 'status error', textContent: error.message })); }
 }
+function renderReturnActions(item, container) {
+  container.replaceChildren();
+  const action = (label, name, reasonRequired = false, noteOptional = false) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = label;
+    button.addEventListener('click', async () => {
+      const reason = reasonRequired ? prompt('Reason') : '';
+      if (reasonRequired && !reason) return;
+      const note = noteOptional ? prompt('Admin note (optional)') : '';
+      try {
+        await request(`/api/orders/admin/returns/${encodeURIComponent(item._id)}/${name}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason, note }),
+        });
+        await loadReturns();
+        if ($('returnDetailModal').open) $('returnDetailModal').close();
+      } catch (error) { alert(error.message); }
+    });
+    container.append(button);
+  };
+  if (item.status === 'requested') { action('Approve', 'approve', false, true); action('Reject', 'reject', true); }
+  if (['awaiting_return_shipment', 'return_in_transit'].includes(item.status)) action('Mark received', 'received', false, true);
+  if (item.status === 'received') { action('Accept inspection', 'inspection-accepted', false, true); action('Reject inspection', 'inspection-rejected', true, true); }
+  if (item.status === 'inspection_accepted') action('Issue refund', 'refund');
+  if (['rejected', 'refunded', 'inspection_rejected'].includes(item.status)) action('Close', 'close');
+}
+
+async function openReturnDetail(item) {
+  try {
+    if (!item.adminSeenAt) {
+      await request(`/api/orders/admin/returns/${encodeURIComponent(item._id)}/seen`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      item.adminSeenAt = new Date();
+    }
+    const [detail, proofData] = await Promise.all([
+      request(`/api/orders/admin/returns/${encodeURIComponent(item._id)}`),
+      request(`/api/orders/admin/returns/${encodeURIComponent(item._id)}/proofs`),
+    ]);
+    await loadReturns();
+    const grid = $('returnDetailGrid');
+    grid.replaceChildren();
+    const left = document.createElement('div');
+    const right = document.createElement('aside');
+    const reasonLabels = {
+      not_as_described: 'Not as described',
+      defective_or_not_working: 'Defective or not working',
+      damaged_in_transit: 'Damaged in transit',
+      wrong_item: 'Wrong item',
+    };
+    const order = detail.order || {};
+    const customer = document.createElement('section');
+    customer.className = 'return-detail-block';
+    [
+      ['Request', detail.requestNumber],
+      ['Order', detail.orderNumber],
+      ['Customer', `${order.customer?.name || 'Unknown'} · ${order.customer?.phone || 'No phone'}`],
+      ['Reason', reasonLabels[detail.reason] || detail.reason],
+      ['Status', String(detail.status || '').replaceAll('_', ' ')],
+      ['Customer details', detail.details || 'None'],
+      ['Admin note', detail.adminNote || 'None'],
+    ].forEach(([label, value]) => {
+      const p = document.createElement('p');
+      p.textContent = `${label}: ${value}`;
+      customer.append(p);
+    });
+    left.append(customer);
+
+    const proofs = document.createElement('section');
+    proofs.className = 'return-detail-block';
+    proofs.append(Object.assign(document.createElement('h3'), { textContent: 'Proofs' }));
+    const proofGrid = document.createElement('div');
+    proofGrid.className = 'return-proof-grid';
+    (proofData.proofs || []).forEach((proof) => {
+      const media = proof.resourceType === 'video' ? document.createElement('video') : document.createElement('img');
+      media.src = proof.url;
+      if (proof.resourceType === 'video') { media.controls = true; media.preload = 'metadata'; } else media.alt = 'Return proof';
+      proofGrid.append(media);
+    });
+    if (!(proofData.proofs || []).length) proofs.append(Object.assign(document.createElement('p'), { textContent: 'No proofs available.' }));
+    proofs.append(proofGrid);
+    left.append(proofs);
+
+    const breakdown = document.createElement('section');
+    breakdown.className = 'return-detail-block';
+    breakdown.append(Object.assign(document.createElement('h3'), { textContent: 'Refund breakdown' }));
+    const money = (value) => `₹${Number(value || 0).toLocaleString('en-IN')}`;
+    const refund = detail.refundBreakdown || {};
+    [['Order total', refund.orderTotal], ['Delivery deducted', refund.deliveryDeducted], ['Return charge', refund.returnChargeDeducted], ['Refund amount', refund.refundAmount]].forEach(([label, value]) => {
+      const p = document.createElement('p');
+      p.textContent = `${label}: ${money(value)}`;
+      breakdown.append(p);
+    });
+    right.append(breakdown);
+
+    const history = document.createElement('section');
+    history.className = 'return-detail-block';
+    history.append(Object.assign(document.createElement('h3'), { textContent: 'Status history' }));
+    (detail.statusHistory || []).forEach((entry) => {
+      const p = document.createElement('p');
+      p.textContent = `${String(entry.action || '').replaceAll('_', ' ')} · ${entry.at ? new Date(entry.at).toLocaleString() : ''}${entry.detail ? ' · ' + entry.detail : ''}`;
+      history.append(p);
+    });
+    right.append(history);
+
+    const modalActions = document.createElement('section');
+    modalActions.className = 'return-detail-block';
+    modalActions.append(Object.assign(document.createElement('h3'), { textContent: 'Actions' }));
+    const actionRow = document.createElement('div');
+    actionRow.className = 'return-detail-actions';
+    renderReturnActions(detail, actionRow);
+    modalActions.append(actionRow);
+    right.append(modalActions);
+
+    grid.append(left, right);
+    if (!$('returnDetailModal').open) $('returnDetailModal').showModal();
+  } catch (error) { alert(error.message); }
+}
+
 async function loadReturns() {
   const list = $('returnList');
   try {
@@ -313,19 +441,15 @@ async function loadReturns() {
       const created = item.createdAt ? new Date(item.createdAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : 'Date unavailable';
       row.innerHTML = `<div><strong>${item.requestNumber}</strong><br><small>${item.orderNumber} · ${reasonLabels[item.reason] || item.reason}</small><br><small>Status: ${statusLabel}</small><br><small>Refund: ₹${Number(item.refundAmount || 0).toLocaleString('en-IN')}</small><br><small>Created: ${created}</small><br><small>Admin note: ${item.adminNote || 'None'}</small></div>`;
       const actions = document.createElement('div'); actions.className = 'admin-product-actions';
-      const action = (label, name, reasonRequired = false, noteOptional = false) => { const button = document.createElement('button'); button.type = 'button'; button.textContent = label; button.addEventListener('click', async () => { const reason = reasonRequired ? prompt('Reason') : ''; if (reasonRequired && !reason) return; const note = noteOptional ? prompt('Admin note (optional)') : ''; try { await request(`/api/orders/admin/returns/${encodeURIComponent(item._id)}/${name}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason, note }) }); await loadReturns(); } catch (error) { alert(error.message); } }); actions.append(button); };
       const view = document.createElement('button'); view.type = 'button'; view.textContent = 'View';
-      view.addEventListener('click', async () => { try { if (!item.adminSeenAt) await request(`/api/orders/admin/returns/${encodeURIComponent(item._id)}/seen`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) }); await loadReturns(); } catch (error) { alert(error.message); } });
+      view.addEventListener('click', () => openReturnDetail(item));
       actions.append(view);
-      if (item.status === 'requested') { action('Approve', 'approve', false, true); action('Reject', 'reject', true); }
-      if (['awaiting_return_shipment', 'return_in_transit'].includes(item.status)) action('Mark received', 'received', false, true);
-      if (item.status === 'received') { action('Accept inspection', 'inspection-accepted', false, true); action('Reject inspection', 'inspection-rejected', true, true); }
-      if (item.status === 'inspection_accepted') action('Issue refund', 'refund');
-      if (['rejected', 'refunded', 'inspection_rejected'].includes(item.status)) action('Close', 'close');
+      renderReturnActions(item, actions);
       row.append(actions); return row;
     }));
   } catch (error) { list.replaceChildren(Object.assign(document.createElement('p'), { className: 'status error', textContent: error.message })); }
 }
+$('closeReturnDetail').addEventListener('click', () => $('returnDetailModal').close());
 async function openEditor(user) {
   if (!['owner', 'manager', 'inventory'].includes(user.role)) throw new Error('Products ke liye owner, manager, ya inventory account chahiye.');
   $('loginPanel').style.display = 'none'; $('dashboard').style.display = 'block'; $('productsPanel').style.display = 'block'; $('logout').hidden = false;

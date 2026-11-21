@@ -3,6 +3,9 @@ const assert = require('node:assert/strict');
 const service = require('../src/modules/orders/return.service');
 const controller = require('../src/modules/orders/return.controller');
 const Order = require('../src/modules/orders/order.model');
+const ReturnRequest = require('../src/modules/orders/return.model');
+const cloudinary = require('../src/config/cloudinary');
+const { requireRole } = require('../src/middleware/auth');
 
 const order = {
   status: 'delivered',
@@ -44,6 +47,48 @@ test('return transition table supports close and received shipment states', () =
   assert.equal(controller.nextReturnStatus.close, 'closed');
   assert.ok(controller.returnTransitions.received.includes('awaiting_return_shipment'));
   assert.ok(controller.returnTransitions.received.includes('return_in_transit'));
+});
+
+test('proof endpoint denies customer roles and manager receives only signed URLs', async () => {
+  let roleStatus;
+  const roleResponse = {
+    status(code) { roleStatus = code; return this; },
+    json(value) { this.body = value; return this; },
+  };
+  requireRole('owner', 'manager')({ user: { role: 'customer' } }, roleResponse, () => { throw new Error('customer role unexpectedly passed'); });
+  assert.equal(roleStatus, 403);
+
+  const originalFindById = ReturnRequest.findById;
+  const originalAssertConfigured = cloudinary.assertConfigured;
+  const originalUrl = cloudinary.url;
+  let queryId;
+  ReturnRequest.findById = (id) => {
+    queryId = id;
+    return {
+      select: async () => ({
+        proofs: [
+          { publicId: 'private-return-proof-id', resourceType: 'image', bytes: 1234 },
+          { publicId: 'private-return-video-id', resourceType: 'video', bytes: 5678 },
+        ],
+      }),
+    };
+  };
+  cloudinary.assertConfigured = () => {};
+  cloudinary.url = () => 'https://signed.example/return-proof?s=signature&expires=600';
+  try {
+    let body;
+    const response = { json(value) { body = value; return this; }, status() { return this; } };
+    await controller.proofs({ params: { id: 'return-123' } }, response, (error) => { throw error; });
+    assert.equal(queryId, 'return-123');
+    assert.equal(body.proofs.length, 2);
+    assert.ok(body.proofs.every((proof) => proof.url.startsWith('https://signed.example/')));
+    assert.ok(body.proofs.every((proof) => !Object.prototype.hasOwnProperty.call(proof, 'publicId')));
+    assert.equal(JSON.stringify(body).includes('private-return-proof-id'), false);
+  } finally {
+    ReturnRequest.findById = originalFindById;
+    cloudinary.assertConfigured = originalAssertConfigured;
+    cloudinary.url = originalUrl;
+  }
 });
 
 test('customer return routes require login and another account receives 404', async () => {
