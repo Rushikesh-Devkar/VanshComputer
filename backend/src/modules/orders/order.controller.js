@@ -5,6 +5,7 @@ const ReturnRequest = require('./return.model');
 const WebhookEvent = require('./webhook-event.model');
 const { itemsSchema, addressSchema, quoteAddressSchema, customerSchema, trackingSchema, policyConsentSchema } = require('./schemas');
 const service = require('./order.service');
+const { normalizeIndianPhone } = require('../../utils/phone');
 
 const reservationMinutes = () => Math.min(60, Math.max(5, Number(process.env.PAYMENT_RESERVATION_MINUTES) || 15));
 // .env / Render mein copy-paste se aksar extra space ya capital letter aa jata hai (jaise "Live " ya key ke aage space).
