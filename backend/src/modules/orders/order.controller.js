@@ -97,6 +97,11 @@ function paymentOrderPayload(order, accessToken, pendingProviderReconciliation =
   };
 }
 
+const priorCheckoutEnded = (prior) =>
+  prior.status !== 'pending_payment' ||
+  !prior.reservationExpiresAt ||
+  new Date(prior.reservationExpiresAt).getTime() <= Date.now();
+
 exports.create = async (req, res, next) => {
   let order, accessToken, checkoutRequestId;
   try {
@@ -114,6 +119,7 @@ exports.create = async (req, res, next) => {
     const prior = await Order.findOne({ checkoutRequestId }).select('+checkoutRequestId +accessTokenHash');
     if (prior) {
       if (prior.accessTokenHash !== accessTokenHash) return res.status(409).json({ message: 'Checkout request could not be verified.' });
+      if (priorCheckoutEnded(prior)) return res.status(409).json({ message: 'This checkout has ended. Please start again.' });
       return res.status(prior.razorpayOrderId ? 200 : 202).json(paymentOrderPayload(prior, accessToken, !prior.razorpayOrderId));
     }
     const phone = normalizeIndianPhone(input.customer.phone);
@@ -144,7 +150,10 @@ exports.create = async (req, res, next) => {
     if (error.code === 11000 && checkoutRequestId) {
       const prior = await Order.findOne({ checkoutRequestId }).select('+checkoutRequestId +accessTokenHash');
       const hash = accessToken && crypto.createHash('sha256').update(accessToken).digest('hex');
-      if (prior && prior.accessTokenHash === hash) return res.status(prior.razorpayOrderId ? 200 : 202).json(paymentOrderPayload(prior, accessToken, !prior.razorpayOrderId));
+      if (prior && prior.accessTokenHash === hash) {
+        if (priorCheckoutEnded(prior)) return res.status(409).json({ message: 'This checkout has ended. Please start again.' });
+        return res.status(prior.razorpayOrderId ? 200 : 202).json(paymentOrderPayload(prior, accessToken, !prior.razorpayOrderId));
+      }
     }
     if (order && !error.uncertain) await service.releaseReservation(order._id, 'payment_failed').catch(() => console.error('Reservation rollback failed.'));
     next(error);

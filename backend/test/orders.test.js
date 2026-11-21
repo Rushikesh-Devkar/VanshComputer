@@ -200,6 +200,79 @@ test('Live Razorpay configuration passes readiness checks without accepting test
   }
 });
 
+test('create reuses a live prior checkout but rejects an expired prior checkout', async () => {
+  const crypto = require('node:crypto');
+  const saved = {
+    mode: process.env.PAYMENT_MODE,
+    keyId: process.env.RAZORPAY_KEY_ID,
+    keySecret: process.env.RAZORPAY_KEY_SECRET,
+    webhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET,
+  };
+  process.env.PAYMENT_MODE = 'test';
+  process.env.RAZORPAY_KEY_ID = 'rzp_test_example123';
+  process.env.RAZORPAY_KEY_SECRET = 'test-secret';
+  process.env.RAZORPAY_WEBHOOK_SECRET = 'webhook-secret';
+
+  const accessToken = 'A'.repeat(43);
+  const accessTokenHash = crypto.createHash('sha256').update(accessToken).digest('hex');
+  const body = {
+    customer: { name: 'Test User', phone: '9999999999', email: 'test@example.com', gstin: '' },
+    address: validAddress,
+    items: [{ productId, quantity: 1 }],
+    expectedTotal: 12500,
+    checkoutRequestId: '123e4567-e89b-42d3-a456-426614174000',
+    accessToken,
+    termsAccepted: true,
+    policyVersion: '2026-01',
+  };
+  const req = { body, user: { role: 'customer', email: 'test@example.com', _id: 'customer-one' } };
+  const originalFindOne = Order.findOne;
+
+  try {
+    let status;
+    let payload;
+    const res = {
+      status(code) { status = code; return this; },
+      json(value) { payload = value; return this; },
+    };
+    const pending = {
+      orderNumber: 'VC20261121-12345678',
+      status: 'pending_payment',
+      reservationExpiresAt: new Date(Date.now() + 600000),
+      razorpayOrderId: 'order_pending',
+      accessTokenHash,
+      total: 12500,
+      currency: 'INR',
+      customer: { name: 'Test User', email: 'test@example.com', phone: '9999999999' },
+      items: [{ name: 'Laptop', quantity: 1, unitPrice: 12500, warrantyMonths: 6 }],
+    };
+    Order.findOne = () => ({ select: async () => pending });
+    await controller.create(req, res, (error) => { throw error; });
+    assert.equal(status, 200);
+    assert.equal(payload.orderNumber, pending.orderNumber);
+    assert.equal(payload.razorpayOrderId, 'order_pending');
+
+    status = undefined;
+    payload = undefined;
+    const expired = { ...pending, reservationExpiresAt: new Date(Date.now() - 1), razorpayOrderId: 'order_expired' };
+    Order.findOne = () => ({ select: async () => expired });
+    await controller.create(req, res, (error) => { throw error; });
+    assert.equal(status, 409);
+    assert.equal(payload.message, 'This checkout has ended. Please start again.');
+  } finally {
+    Order.findOne = originalFindOne;
+    for (const [key, value] of Object.entries({
+      PAYMENT_MODE: saved.mode,
+      RAZORPAY_KEY_ID: saved.keyId,
+      RAZORPAY_KEY_SECRET: saved.keySecret,
+      RAZORPAY_WEBHOOK_SECRET: saved.webhookSecret,
+    })) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+});
+
 test('payment.failed webhook keeps the reservation so the customer can retry in the same popup', async () => {
   const crypto = require('node:crypto');
   const WebhookEvent = require('../src/modules/orders/webhook-event.model');
