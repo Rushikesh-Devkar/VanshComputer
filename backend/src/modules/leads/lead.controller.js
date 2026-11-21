@@ -34,8 +34,27 @@ exports.create = async (req, res, next) => {
 
 exports.list = async (req, res, next) => {
   try {
-    const leads = await Lead.find().sort({ createdAt: -1 });
-    res.json(leads);
+    const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+    const limit = 50;
+    const filter = {};
+    if (req.query.status) {
+      const status = String(req.query.status).trim();
+      if (['new', 'contacted', 'interested', 'follow-up', 'converted', 'lost'].includes(status)) {
+        filter.status = status;
+      }
+    }
+    const search = String(req.query.q || '').trim();
+    if (search) {
+      const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      filter.$or = [
+        { name: new RegExp(escaped, 'i') },
+        { phone: new RegExp(escaped, 'i') },
+      ];
+    }
+    const total = await Lead.countDocuments(filter);
+    const pages = Math.max(1, Math.ceil(total / limit));
+    const leads = await Lead.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit);
+    res.json({ items: leads, total, page: Math.min(page, pages), pages, limit });
   } catch (error) {
     next(error);
   }

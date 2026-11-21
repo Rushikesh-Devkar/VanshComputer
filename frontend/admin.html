@@ -34,7 +34,7 @@ body{background:#F3F6FA}.admin{max-width:none;margin:0;padding:0}.panel{backgrou
 
   <div class="dashboard" id="dashboard">
   <div class="admin-topbar"><div class="admin-brand"><img src="img/logo.jpg" alt=""><span>Vansh Computer Admin</span></div><h1 id="viewTitle">Banners</h1><button id="logout" class="btn line" type="button" hidden>Log out</button></div>
-  <div class="dashboard-layout"><aside class="sidebar" id="admin-sidebar"><div class="sidebar-brand"><img src="img/logo.jpg" alt="Vansh Computer logo"><strong>Vansh Computer</strong><span>Store administration</span></div><div class="sidebar-label">Manage store</div><nav aria-label="Admin sections"><a href="#banners" data-view="banners"><span class="nav-icon">▧</span>Banners</a><a href="#stories" data-view="stories" data-owner-only><span class="nav-icon">☆</span>Reviews &amp; Reels</a><a href="#products" data-view="products"><span class="nav-icon">▦</span>Products</a><a href="#shipping" data-view="shipping" data-owner-only><span class="nav-icon">⌁</span>Shipping</a><a href="#orders" data-view="orders" data-owner-only><span class="nav-icon">▤</span>Orders</a><a href="#returns" data-view="returns" data-owner-only><span class="nav-icon">↩</span>Returns <b id="returnUnreadBadge" hidden>0</b></a></nav></aside><div class="dashboard-main" id="admin-main"><div class="admin-view active" data-panel="banners">
+  <div class="dashboard-layout"><aside class="sidebar" id="admin-sidebar"><div class="sidebar-brand"><img src="img/logo.jpg" alt="Vansh Computer logo"><strong>Vansh Computer</strong><span>Store administration</span></div><div class="sidebar-label">Manage store</div><nav aria-label="Admin sections"><a href="#banners" data-view="banners" data-owner-only><span class="nav-icon">▧</span>Banners</a><a href="#stories" data-view="stories" data-owner-only><span class="nav-icon">☆</span>Reviews &amp; Reels</a><a href="#products" data-view="products" data-sales-hide><span class="nav-icon">▦</span>Products</a><a href="#shipping" data-view="shipping" data-owner-only><span class="nav-icon">⌁</span>Shipping</a><a href="#orders" data-view="orders" data-owner-only><span class="nav-icon">▤</span>Orders</a><a href="#leads" data-view="leads" data-leads-only><span class="nav-icon">☎</span>Leads <b id="leadUnreadBadge" hidden>0</b></a><a href="#returns" data-view="returns" data-owner-only><span class="nav-icon">↩</span>Returns <b id="returnUnreadBadge" hidden>0</b></a></nav></aside><div class="dashboard-main" id="admin-main"><div class="admin-view active" data-panel="banners">
   <section class="panel" id="editor">
     <div class="section-links"><a href="#editor">Homepage banner</a><a href="#shopBannerForm">Shop offer banner</a><a href="#socialContent">Reviews &amp; Reels</a><a href="#productsPanel">Products</a><a href="#shippingPanel">Shipping Settings</a><a href="#ordersPanel">Orders</a></div>
     <h1>Homepage banner</h1><p class="hint">Update the banner text and optional image. “Shop Now” and “Get a Callback” stay on the banner automatically.</p>
@@ -91,7 +91,7 @@ body{background:#F3F6FA}.admin{max-width:none;margin:0;padding:0}.panel{backgrou
         <div class="shipping-preview" id="shippingPreview" aria-live="polite"></div>
         <div class="actions"><button class="btn" type="submit">Save shipping settings</button><p class="status" id="shippingStatus" role="status"></p></div>
       </form>
-    </section></div><div class="admin-view" data-panel="returns"><section class="panel" id="returnsPanel"><h2>Return requests</h2><p class="hint">Review proof, approve or reject requests, record inspection, and issue server-computed refunds. Relist returned stock manually.</p><div id="returnList" class="admin-list"><p class="hint">Loading return requests...</p></div></section></div><div class="admin-view" data-panel="orders"><section class="panel" id="ordersPanel">
+    </section></div><div class="admin-view" data-panel="leads"><section class="panel" id="leadsPanel"><h2>Customer leads</h2><p class="hint">Review callback, hold-request, product enquiry and repair leads.</p><form class="order-filters" id="leadFilters"><label>Status<select id="leadStatusFilter"><option value="">All statuses</option><option value="new">New</option><option value="contacted">Contacted</option><option value="interested">Interested</option><option value="follow-up">Follow-up</option><option value="converted">Converted</option><option value="lost">Lost</option></select></label><label>Search phone or name<input id="leadSearch" maxlength="100"></label><button class="btn" type="submit">Search leads</button></form><div id="leadList" class="admin-list"><p class="hint">Loading leads...</p></div><div class="order-actions" style="margin-top:16px"><button class="btn line" id="leadPrev" type="button">Previous</button><span id="leadPageInfo"></span><button class="btn line" id="leadNext" type="button">Next</button></div></section></div><div class="admin-view" data-panel="returns"><section class="panel" id="returnsPanel"><h2>Return requests</h2><p class="hint">Review proof, approve or reject requests, record inspection, and issue server-computed refunds. Relist returned stock manually.</p><div id="returnList" class="admin-list"><p class="hint">Loading return requests...</p></div></section></div><div class="admin-view" data-panel="orders"><section class="panel" id="ordersPanel">
     <hr style="border:0;border-top:1px solid var(--line);margin:36px 0">
       <h2>Orders</h2><p class="hint">Review guest orders, verified payment status, and courier tracking. Payment status is confirmed only by verified Razorpay webhooks.</p>
       <form class="order-filters" id="orderFilters">
@@ -154,6 +154,7 @@ let selectedShopImagePreviewUrl = '';
 let editingProductId = '';
 let currentImageCount = 0;
 let productPhotoPreviews = [];
+let leadPage = 1;
 const showError = (el, message) => { el.textContent = message; el.classList.add('error'); };
 const clearStatus = (el) => { el.textContent = ''; el.classList.remove('error'); };
 async function request(path, options) {
@@ -454,19 +455,168 @@ async function loadReturns() {
   } catch (error) { list.replaceChildren(Object.assign(document.createElement('p'), { className: 'status error', textContent: error.message })); }
 }
 $('closeReturnDetail').addEventListener('click', () => $('returnDetailModal').close());
+async function loadLeadBadge() {
+  try {
+    const data = await request('/api/leads?status=new&page=1');
+    const count = Number(data.total || 0);
+    $('leadUnreadBadge').textContent = String(count);
+    $('leadUnreadBadge').hidden = count === 0;
+  } catch (_) {}
+}
+
+async function updateLead(leadId, payload) {
+  await request(`/api/leads/${encodeURIComponent(leadId)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  await loadLeads();
+  await loadLeadBadge();
+}
+
+async function loadLeads() {
+  const container = $('leadList');
+  const params = new URLSearchParams();
+  params.set('page', String(leadPage));
+  if ($('leadStatusFilter').value) params.set('status', $('leadStatusFilter').value);
+  if ($('leadSearch').value.trim()) params.set('q', $('leadSearch').value.trim());
+  try {
+    const data = await request('/api/leads?' + params.toString());
+    const leads = listOf(data);
+    const rows = leads.map((lead) => {
+      const row = document.createElement('article');
+      row.className = 'order-row';
+      const heading = document.createElement('div');
+      heading.className = 'order-heading';
+      const name = document.createElement('strong');
+      name.textContent = lead.name || 'Unnamed lead';
+      const created = document.createElement('small');
+      created.className = 'order-time';
+      created.textContent = lead.createdAt ? new Date(lead.createdAt).toLocaleString() : '';
+      heading.append(name, created);
+
+      const sections = document.createElement('div');
+      sections.className = 'order-sections';
+      const details = document.createElement('section');
+      details.className = 'order-section';
+      [
+        ['Phone', lead.phone || ''],
+        ['Enquiry', lead.enquiryType || 'callback'],
+        ['Preferred contact', lead.preferredContact || 'either'],
+        ['Product', lead.productSnapshot?.name || 'No product'],
+        ['Price', lead.productSnapshot?.price != null ? `₹${Number(lead.productSnapshot.price).toLocaleString('en-IN')}` : ''],
+        ['Consent contact', lead.consent?.contactAllowed ? 'Yes' : 'No'],
+        ['Consent marketing', lead.consent?.marketingAllowed ? 'Yes' : 'No'],
+        ['Consent source', lead.consent?.source || ''],
+      ].forEach(([label, value]) => {
+        const p = document.createElement('p');
+        p.textContent = `${label}: ${value}`;
+        details.append(p);
+      });
+
+      const controls = document.createElement('section');
+      controls.className = 'order-section';
+      const statusLabel = document.createElement('label');
+      statusLabel.textContent = 'Status ';
+      const status = document.createElement('select');
+      ['new', 'contacted', 'interested', 'follow-up', 'converted', 'lost'].forEach((value) => {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = value.replaceAll('-', ' ');
+        option.selected = lead.status === value;
+        status.append(option);
+      });
+      status.addEventListener('change', () => updateLead(lead._id, { status: status.value }).catch((error) => alert(error.message)));
+      statusLabel.append(status);
+      controls.append(statusLabel);
+
+      const followLabel = document.createElement('label');
+      followLabel.textContent = ' Follow-up ';
+      const follow = document.createElement('input');
+      follow.type = 'datetime-local';
+      if (lead.followUpDate) follow.value = new Date(lead.followUpDate).toISOString().slice(0, 16);
+      follow.addEventListener('change', () => {
+        updateLead(lead._id, { followUpDate: follow.value ? new Date(follow.value).toISOString() : null }).catch((error) => alert(error.message));
+      });
+      followLabel.append(follow);
+      controls.append(followLabel);
+
+      const notesHeading = document.createElement('h3');
+      notesHeading.textContent = 'Notes';
+      controls.append(notesHeading);
+      (lead.notes || []).forEach((note) => {
+        const p = document.createElement('p');
+        p.textContent = `${note.text || ''}${note.at ? ' · ' + new Date(note.at).toLocaleString() : ''}`;
+        controls.append(p);
+      });
+      const noteButton = document.createElement('button');
+      noteButton.type = 'button';
+      noteButton.className = 'btn line';
+      noteButton.textContent = 'Add note';
+      noteButton.addEventListener('click', () => {
+        const note = prompt('Lead note');
+        if (!note) return;
+        updateLead(lead._id, { note }).catch((error) => alert(error.message));
+      });
+      controls.append(noteButton);
+
+      const actions = document.createElement('div');
+      actions.className = 'order-actions';
+      const phoneDigits = String(lead.phone || '').replace(/\D/g, '');
+      if (phoneDigits) {
+        const call = document.createElement('a');
+        call.className = 'btn line';
+        call.href = `tel:+${phoneDigits}`;
+        call.textContent = 'Call';
+        const whatsAppDigits = phoneDigits.length === 10 ? `91${phoneDigits}` : phoneDigits;
+        const whatsapp = document.createElement('a');
+        whatsapp.className = 'btn line';
+        whatsapp.href = `https://wa.me/${whatsAppDigits}?text=${encodeURIComponent(`Hi ${lead.name || ''}, regarding your ${lead.enquiryType || 'callback'} enquiry at Vansh Computer.`)}`;
+        whatsapp.target = '_blank';
+        whatsapp.rel = 'noopener';
+        whatsapp.textContent = 'WhatsApp';
+        actions.append(call, whatsapp);
+      }
+      sections.append(details, controls);
+      row.append(heading, sections, actions);
+      return row;
+    });
+    container.replaceChildren(...(rows.length ? rows : [Object.assign(document.createElement('p'), { className: 'hint', textContent: 'No leads match these filters.' })]));
+    const totalPages = Number(data.pages || 1);
+    const page = Number(data.page || 1);
+    $('leadPageInfo').textContent = `Page ${page} of ${totalPages}`;
+    $('leadPrev').disabled = page <= 1;
+    $('leadNext').disabled = page >= totalPages;
+  } catch (error) {
+    container.replaceChildren(Object.assign(document.createElement('p'), { className: 'status error', textContent: error.message }));
+  }
+}
+
 async function openEditor(user) {
-  if (!['owner', 'manager', 'inventory'].includes(user.role)) throw new Error('Products ke liye owner, manager, ya inventory account chahiye.');
+  if (!['owner', 'manager', 'inventory', 'sales'].includes(user.role)) throw new Error('Owner, manager, inventory, or sales access is required.');
   $('loginPanel').style.display = 'none'; $('dashboard').style.display = 'block'; $('productsPanel').style.display = 'block'; $('logout').hidden = false;
   const owner = ['owner', 'manager'].includes(user.role);
+  const sales = user.role === 'sales';
   document.querySelectorAll('[data-owner-only]').forEach(link => { link.hidden = !owner; });
-  if (!owner) switchAdminView('products'); else switchAdminView('banners');
-  await loadProducts();
+  document.querySelectorAll('[data-leads-only]').forEach(link => { link.hidden = !owner && !sales; });
+  document.querySelectorAll('[data-sales-hide]').forEach(link => { link.hidden = sales; });
+  if (sales) {
+    switchAdminView('leads');
+  } else if (user.role === 'inventory') {
+    switchAdminView('products');
+  } else {
+    switchAdminView('banners');
+  }
+  if (owner || user.role === 'inventory') await loadProducts();
   if (owner) {
     $('editor').style.display = 'block';
-    await Promise.allSettled([loadBanner(), loadSocialContent(), loadShippingSettings(), loadOrders(), loadReturns()]);
-  } else $('editor').style.display = 'none';
+    await Promise.allSettled([loadBanner(), loadSocialContent(), loadShippingSettings(), loadOrders(), loadReturns(), loadLeads(), loadLeadBadge()]);
+  } else {
+    $('editor').style.display = 'none';
+    if (sales) await Promise.allSettled([loadLeads(), loadLeadBadge()]);
+  }
 }
-const adminViewTitles = { banners: 'Banners', stories: 'Reviews & Reels', products: 'Products', shipping: 'Shipping settings', orders: 'Orders', returns: 'Return requests' };
+const adminViewTitles = { banners: 'Banners', stories: 'Reviews & Reels', products: 'Products', shipping: 'Shipping settings', orders: 'Orders', leads: 'Customer leads', returns: 'Return requests' };
 function switchAdminView(name) {
   document.querySelectorAll('.admin-view').forEach(view => view.classList.toggle('active', view.dataset.panel === name));
   document.querySelectorAll('.sidebar nav a').forEach(link => link.classList.toggle('active', link.dataset.view === name));
@@ -504,6 +654,10 @@ $('shippingForm').addEventListener('submit', async (event) => {
   catch (error) { showError(status, error.message); }
 });
 $('orderFilters').addEventListener('submit', (event) => { event.preventDefault(); loadOrders(); });
+$('leadFilters').addEventListener('submit', (event) => { event.preventDefault(); leadPage = 1; loadLeads(); });
+$('leadStatusFilter').addEventListener('change', () => { leadPage = 1; loadLeads(); });
+$('leadPrev').addEventListener('click', () => { if (leadPage > 1) { leadPage--; loadLeads(); } });
+$('leadNext').addEventListener('click', () => { leadPage++; loadLeads(); });
 $('bannerForm').addEventListener('input', updatePreview);
 $('image').addEventListener('change', () => {
   if (selectedImagePreviewUrl) URL.revokeObjectURL(selectedImagePreviewUrl);
