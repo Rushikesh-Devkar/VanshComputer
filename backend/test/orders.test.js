@@ -27,6 +27,11 @@ test('delivery address rejects states other than Maharashtra', () => {
   assert.throws(() => addressSchema.parse({ ...validAddress, state: 'Gujarat' }));
 });
 
+test('order model and admin status enums include out for delivery', () => {
+  assert.ok(Order.schema.path('status').enumValues.includes('out_for_delivery'));
+  assert.ok(controller.adminList);
+});
+
 test('tracking schema accepts only an order number', () => {
   assert.equal(trackingSchema.parse({ orderNumber: 'VC20261025-ABCDEF12' }).orderNumber, 'VC20261025-ABCDEF12');
   assert.equal(trackingSchema.parse({}).orderNumber, undefined);

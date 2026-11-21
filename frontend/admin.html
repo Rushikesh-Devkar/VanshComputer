@@ -96,7 +96,7 @@ body{background:#F3F6FA}.admin{max-width:none;margin:0;padding:0}.panel{backgrou
       <h2>Orders</h2><p class="hint">Review guest orders, verified payment status, and courier tracking. Payment status is confirmed only by verified Razorpay webhooks.</p>
       <form class="order-filters" id="orderFilters">
         <label>Order number<input id="orderSearch" maxlength="24"></label>
-        <label>Status<select id="orderStatusFilter"><option value="">All statuses</option><option>pending_payment</option><option>paid</option><option>processing</option><option>shipped</option><option>delivered</option><option>payment_failed</option><option>cancelled</option><option>expired</option><option>refund_pending</option><option>refund_review</option><option>refunded</option><option>refund_failed</option></select></label>
+        <label>Status<select id="orderStatusFilter"><option value="">All statuses</option><option>pending_payment</option><option>paid</option><option>processing</option><option>shipped</option><option>out_for_delivery</option><option>delivered</option><option>payment_failed</option><option>cancelled</option><option>expired</option><option>refund_pending</option><option>refund_review</option><option>refunded</option><option>refund_failed</option></select></label>
         <label>From<input id="orderFrom" type="date"></label><label>To<input id="orderTo" type="date"></label>
         <button class="btn" type="submit">Search orders</button>
       </form>
@@ -295,7 +295,20 @@ async function loadOrders() {
         button('Mark shipped', () => update('shipped', { courierName: courier.value.trim(), trackingNumber: trackingNo.value.trim() }));
         button('Request full refund', async () => { if (!confirm(`Request a full verified-provider refund for ${order.orderNumber}?`)) return; await request('/api/orders/admin/' + encodeURIComponent(order._id) + '/refund', { method: 'POST' }); await loadOrders(); });
       }
-      if (order.status === 'shipped') button('Mark delivered', () => {
+      if (order.status === 'shipped') {
+        button('Mark out for delivery', () => update('out_for_delivery'));
+        button('Mark delivered', () => {
+          const otp = prompt('Enter the 6-digit customer Delivery OTP');
+          if (otp) return update('delivered', { otp: otp.trim() });
+          if (currentAdminRole === 'owner' && confirm('Owner override delivery without OTP?')) {
+            const reason = prompt('Owner override reason');
+            if (!reason) return Promise.reject(new Error('Owner override reason is required.'));
+            return update('delivered', { override: true, reason: reason.trim() });
+          }
+          return Promise.reject(new Error('Delivery OTP is required.'));
+        });
+      }
+      if (order.status === 'out_for_delivery') button('Mark delivered', () => {
         const otp = prompt('Enter the 6-digit customer Delivery OTP');
         if (otp) return update('delivered', { otp: otp.trim() });
         if (currentAdminRole === 'owner' && confirm('Owner override delivery without OTP?')) {

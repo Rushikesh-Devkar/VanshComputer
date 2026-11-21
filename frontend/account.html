@@ -13,8 +13,8 @@ function renderOrders(){
  const cards=shown.map(o=>h('a',{class:'account-order',href:'order-detail.html?order='+encodeURIComponent(o.orderNumber)},
   o.items?.[0]?.imageUrl?h('img',{src:img(o.items[0].imageUrl,120),alt:o.items[0].name}):null,
   h('div',{},h('strong',{},o.items?.[0]?.name||o.orderNumber),h('small',{},o.orderNumber+' · '+new Date(o.createdAt).toLocaleDateString()),
-   o.status==='shipped'?h('small',{},[o.courierName,o.trackingNumber?'AWB '+o.trackingNumber:''].filter(Boolean).join(' · ')):null),
-  h('div',{},h('strong',{},String(o.status).replaceAll('_',' ')),h('small',{},'Payment: '+String(o.paymentStatus).replaceAll('_',' '))),h('b',{},rupee(o.total))));
+   ['shipped','out_for_delivery'].includes(o.status)?h('small',{},[o.courierName,o.trackingNumber?'AWB '+o.trackingNumber:''].filter(Boolean).join(' · ')):null),
+  h('div',{},h('strong',{},orderStatusLabel(o.status)),h('small',{},'Payment: '+String(o.paymentStatus).replaceAll('_',' '))),h('b',{},rupee(o.total))));
  root.querySelector('#orderList')?.replaceChildren(...(cards.length?cards:[h('p',{class:'account-note'},'No orders to show.')]))
 }
 async function loadReturns(){

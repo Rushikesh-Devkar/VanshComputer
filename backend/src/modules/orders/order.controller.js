@@ -245,7 +245,7 @@ exports.mineDetail = async (req, res, next) => {
     const items = (order.items || []).map(({ name, imageUrl, quantity, unitPrice, originalPrice, lineTotal, warrantyMonths, type }) =>
       ({ name, imageUrl, quantity, unitPrice, originalPrice, lineTotal, warrantyMonths, type }));
     let deliveryOtp = '';
-    if (order.status === 'shipped' && order.deliveryOtpEncrypted && order.deliveryOtpExpiresAt && new Date(order.deliveryOtpExpiresAt) > new Date()) {
+    if (['shipped', 'out_for_delivery'].includes(order.status) && order.deliveryOtpEncrypted && order.deliveryOtpExpiresAt && new Date(order.deliveryOtpExpiresAt) > new Date()) {
       deliveryOtp = decryptDeliveryOtp(order.deliveryOtpEncrypted);
     }
     res.json({ orderNumber: order.orderNumber, items, address: order.address, subtotal: order.subtotal, discount: order.discount,
@@ -543,7 +543,7 @@ exports.track = async (req, res, next) => {
 exports.adminList = async (req, res, next) => {
   try {
     const filter = {};
-    if (req.query.status) filter.status = z.enum(['pending_payment', 'paid', 'processing', 'shipped', 'delivered', 'payment_failed', 'cancelled', 'expired', 'refund_pending', 'refund_review', 'refunded', 'partially_refunded', 'refund_failed']).parse(req.query.status);
+    if (req.query.status) filter.status = z.enum(['pending_payment', 'paid', 'processing', 'shipped', 'out_for_delivery', 'delivered', 'payment_failed', 'cancelled', 'expired', 'refund_pending', 'refund_review', 'refunded', 'partially_refunded', 'refund_failed']).parse(req.query.status);
     if (req.query.from || req.query.to) {
       filter.createdAt = {};
       if (req.query.from) filter.createdAt.$gte = new Date(z.string().datetime().parse(req.query.from));
@@ -558,7 +558,7 @@ exports.adminList = async (req, res, next) => {
 exports.adminUpdate = async (req, res, next) => {
   try {
     const input = z.object({
-      status: z.enum(['processing', 'shipped', 'delivered', 'cancelled']),
+      status: z.enum(['processing', 'shipped', 'out_for_delivery', 'delivered', 'cancelled']),
       courierName: z.string().trim().max(100).optional(),
       trackingNumber: z.string().trim().max(100).optional(),
       otp: z.string().regex(/^\d{6}$/).optional(),
@@ -568,7 +568,7 @@ exports.adminUpdate = async (req, res, next) => {
     const order = await Order.findById(req.params.id).select('+deliveryOtpHash +deliveryOtpEncrypted');
     if (!order) return res.status(404).json({ message: 'Order not found.' });
     const allowed = {
-      paid: ['processing', 'cancelled'], processing: ['shipped', 'cancelled'], shipped: ['delivered'],
+      paid: ['processing', 'cancelled'], processing: ['shipped', 'cancelled'], shipped: ['out_for_delivery', 'delivered'], out_for_delivery: ['delivered'],
       pending_payment: ['cancelled'],
     };
     if (!(allowed[order.status] || []).includes(input.status)) return res.status(409).json({ message: 'Invalid order status transition.' });
@@ -597,7 +597,7 @@ exports.adminUpdate = async (req, res, next) => {
         const matches = expected.length === supplied.length && crypto.timingSafeEqual(expected, supplied);
         if (!matches) {
           const attempt = await Order.findOneAndUpdate(
-            { _id: order._id, status: 'shipped', deliveryOtpAttempts: { $lt: 5 } },
+            { _id: order._id, status: { $in: ['shipped', 'out_for_delivery'] }, deliveryOtpAttempts: { $lt: 5 } },
             { $inc: { deliveryOtpAttempts: 1 } },
             { new: true }
           ).select('deliveryOtpAttempts');

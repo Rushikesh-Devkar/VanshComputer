@@ -9,6 +9,25 @@ const STORE = {
   mapsUrl: 'https://maps.app.goo.gl/LvvZbApBRxbzKYFV8?g_st=ic',
 };
 const rupee = (n) => '₹ ' + Number(n).toLocaleString('en-IN');
+const ORDER_STATUS_LABELS = {
+  pending_payment: 'Awaiting payment',
+  paid: 'Payment confirmed',
+  processing: 'Packed',
+  shipped: 'Shipped',
+  out_for_delivery: 'Out for delivery',
+  delivered: 'Delivered',
+  payment_failed: 'Payment failed',
+  cancelled: 'Cancelled',
+  expired: 'Payment expired',
+  refund_pending: 'Refund pending',
+  refund_review: 'Refund under review',
+  refund_failed: 'Refund failed',
+  refunded: 'Refunded',
+  partially_refunded: 'Partially refunded',
+};
+function orderStatusLabel(status) {
+  return ORDER_STATUS_LABELS[status] || String(status || '').replaceAll('_', ' ');
+}
 const img = (url, w) => url.replace('/upload/', '/upload/f_auto,q_auto,w_' + w + '/');
 
 // Safe element builder: API ka data hamesha text banke jata hai, HTML nahi

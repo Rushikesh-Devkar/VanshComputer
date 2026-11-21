@@ -54,7 +54,7 @@ const orderSchema = new mongoose.Schema({
   termsAccepted: { type: Boolean, required: true, default: false },
   termsAcceptedAt: { type: Date, default: null },
   policyVersion: { type: String, default: '' },
-  status: { type: String, enum: ['pending_payment', 'paid', 'processing', 'shipped', 'delivered', 'payment_failed', 'cancelled', 'expired', 'refund_pending', 'refund_review', 'refunded', 'partially_refunded', 'refund_failed'], default: 'pending_payment', index: true },
+  status: { type: String, enum: ['pending_payment', 'paid', 'processing', 'shipped', 'out_for_delivery', 'delivered', 'payment_failed', 'cancelled', 'expired', 'refund_pending', 'refund_review', 'refunded', 'partially_refunded', 'refund_failed'], default: 'pending_payment', index: true },
   paymentStatus: { type: String, enum: ['created', 'authorized', 'captured', 'failed', 'expired', 'refund_pending', 'refund_review', 'refunded', 'partially_refunded', 'refund_failed'], default: 'created', index: true },
   paymentProvider: { type: String, default: 'razorpay' },
   razorpayOrderId: { type: String, sparse: true, unique: true },
