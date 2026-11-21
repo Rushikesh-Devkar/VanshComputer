@@ -1,6 +1,6 @@
 ﻿const BUSINESS = window.BUSINESS;
 const STORE = {
-  whatsapp: '919404048303',
+  whatsapp: '919404948303',
   phone: BUSINESS.phone.replace(/\s/g, ''),
   phoneLabel: BUSINESS.phone,
   hours: BUSINESS.hours,
