@@ -160,25 +160,6 @@ async function request(path, options) {
     error.status = response.status;
     throw error;
   }
-  async function loadReturns() {
-    const list = $('returnList');
-    try {
-      const rows = await request('/api/orders/admin/returns');
-      const unread = rows.filter((item) => !item.adminSeenAt).length;
-      $('returnUnreadBadge').textContent = String(unread); $('returnUnreadBadge').hidden = unread === 0;
-      document.title = unread ? `(${unread}) Admin | Vansh Computer` : 'Admin | Vansh Computer';
-      list.replaceChildren(...rows.map((item) => {
-        const row = document.createElement('article'); row.className = 'admin-product';
-        row.innerHTML = `<div><strong>${item.requestNumber}</strong><br><small>${item.orderNumber} · ${item.reason} · ${item.status}</small><br><small>Refund: ₹${Number(item.refundAmount || 0).toLocaleString('en-IN')}</small></div>`;
-        const actions = document.createElement('div'); actions.className = 'admin-product-actions';
-        const action = (label, name, reasonRequired = false) => { const button = document.createElement('button'); button.type = 'button'; button.textContent = label; button.addEventListener('click', async () => { const reason = reasonRequired ? prompt('Reason') : ''; if (reasonRequired && !reason) return; try { await request(`/api/orders/admin/returns/${encodeURIComponent(item._id)}/${name}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) }); await loadReturns(); } catch (error) { alert(error.message); } }); actions.append(button); };
-        if (item.status === 'requested') { action('Approve', 'approve'); action('Reject', 'reject', true); }
-        if (item.status === 'received') { action('Accept inspection', 'inspection-accepted'); action('Reject inspection', 'inspection-rejected', true); }
-        if (item.status === 'inspection_accepted') action('Issue refund', 'refund');
-        row.append(actions); return row;
-      }));
-    } catch (error) { list.replaceChildren(Object.assign(document.createElement('p'), { className: 'status error', textContent: error.message })); }
-  }
   return data;
 }
 function showLoginPanel(message = '') {
@@ -312,6 +293,25 @@ async function loadOrders() {
       return row;
     }));
   } catch (error) { container.replaceChildren(Object.assign(document.createElement('p'), { className: 'status error', textContent: error.message })); }
+}
+async function loadReturns() {
+  const list = $('returnList');
+  try {
+    const rows = await request('/api/orders/admin/returns');
+    const unread = rows.filter((item) => !item.adminSeenAt).length;
+    $('returnUnreadBadge').textContent = String(unread); $('returnUnreadBadge').hidden = unread === 0;
+    document.title = unread ? `(${unread}) Admin | Vansh Computer` : 'Admin | Vansh Computer';
+    list.replaceChildren(...rows.map((item) => {
+      const row = document.createElement('article'); row.className = 'admin-product';
+      row.innerHTML = `<div><strong>${item.requestNumber}</strong><br><small>${item.orderNumber} · ${item.reason} · ${item.status}</small><br><small>Refund: ₹${Number(item.refundAmount || 0).toLocaleString('en-IN')}</small></div>`;
+      const actions = document.createElement('div'); actions.className = 'admin-product-actions';
+      const action = (label, name, reasonRequired = false) => { const button = document.createElement('button'); button.type = 'button'; button.textContent = label; button.addEventListener('click', async () => { const reason = reasonRequired ? prompt('Reason') : ''; if (reasonRequired && !reason) return; try { await request(`/api/orders/admin/returns/${encodeURIComponent(item._id)}/${name}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) }); await loadReturns(); } catch (error) { alert(error.message); } }); actions.append(button); };
+      if (item.status === 'requested') { action('Approve', 'approve'); action('Reject', 'reject', true); }
+      if (item.status === 'received') { action('Accept inspection', 'inspection-accepted'); action('Reject inspection', 'inspection-rejected', true); }
+      if (item.status === 'inspection_accepted') action('Issue refund', 'refund');
+      row.append(actions); return row;
+    }));
+  } catch (error) { list.replaceChildren(Object.assign(document.createElement('p'), { className: 'status error', textContent: error.message })); }
 }
 async function openEditor(user) {
   if (!['owner', 'manager', 'inventory'].includes(user.role)) throw new Error('Products ke liye owner, manager, ya inventory account chahiye.');
