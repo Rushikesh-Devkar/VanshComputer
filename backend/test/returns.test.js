@@ -110,3 +110,42 @@ test('customer return routes require login and another account receives 404', as
     assert.equal(status, 404);
   } finally { Order.findOne = original; }
 });
+
+test('customer shipment submission verifies ownership and awaiting status', async () => {
+  const originalFindOne = ReturnRequest.findOne;
+  let query;
+  let status;
+  let body;
+  const response = {
+    status(code) { status = code; return this; },
+    json(value) { body = value; return this; },
+  };
+  try {
+    ReturnRequest.findOne = async (filter) => { query = filter; return null; };
+    await controller.shipment({
+      params: { requestNumber: 'RR20261121ABC123' },
+      user: { _id: 'customer-two' },
+      body: { courier: 'Delhivery', trackingNumber: 'TRK123' },
+    }, response, (error) => { throw error; });
+    assert.deepEqual(query, { requestNumber: 'RR20261121ABC123', customerAccount: 'customer-two' });
+    assert.equal(status, 404);
+
+    status = undefined;
+    body = undefined;
+    const wrongStatus = {
+      status: 'received',
+      save: async () => {},
+      statusHistory: [],
+    };
+    ReturnRequest.findOne = async () => wrongStatus;
+    await controller.shipment({
+      params: { requestNumber: 'RR20261121ABC123' },
+      user: { _id: 'customer-one' },
+      body: { courier: 'Delhivery', trackingNumber: 'TRK123' },
+    }, response, (error) => { throw error; });
+    assert.equal(status, 409);
+    assert.equal(body.message, 'This return is not awaiting shipment.');
+  } finally {
+    ReturnRequest.findOne = originalFindOne;
+  }
+});

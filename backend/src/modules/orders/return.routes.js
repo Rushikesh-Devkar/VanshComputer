@@ -10,6 +10,7 @@ const returnLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, message: { 
 router.get('/return-policy', c.policy);
 router.get('/returns/mine', requireAuth('customer'), requireRole('customer'), c.mine);
 router.post('/returns/:requestNumber/status', returnLimit, requireAuth('customer'), requireRole('customer'), c.status);
+router.post('/returns/:requestNumber/shipment', returnLimit, requireAuth('customer'), requireRole('customer'), c.shipment);
 router.post('/:orderNumber/returns', returnLimit, requireAuth('customer'), requireRole('customer'), upload.fields([{ name: 'proof', maxCount: 6 }, { name: 'video', maxCount: 1 }]), (req, res, next) => { req.files = [...(req.files && req.files.proof || []), ...(req.files && req.files.video || [])]; next(); }, c.create);
 router.get('/admin/returns', ...managers, c.list);
 router.get('/admin/returns/:id', ...managers, c.detail);

@@ -11,7 +11,7 @@ function calculateRefundAmount(order, settings = {}) {
 
 async function getSettings() {
   return (await ShippingSettings.findById('maharashtra').lean()) || {
-    returnsEnabled: false, returnWindowDays: null, eligibleReasons: DEFAULT_REASONS,
+    returnsEnabled: false, returnWindowDays: null, eligibleReasons: DEFAULT_REASONS, returnAddress: '',
     returnShippingMode: 'customer_ships', returnShippingCharge: null, refundOriginalDelivery: false, refundProcessingDays: null,
   };
 }

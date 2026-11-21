@@ -17,7 +17,35 @@ function renderOrders(){
   h('div',{},h('strong',{},String(o.status).replaceAll('_',' ')),h('small',{},'Payment: '+String(o.paymentStatus).replaceAll('_',' '))),h('b',{},rupee(o.total))));
  root.querySelector('#orderList')?.replaceChildren(...(cards.length?cards:[h('p',{class:'account-note'},'No orders to show.')]))
 }
-async function loadReturns(){const data=await api('/api/orders/returns/mine');root.querySelector('#orderList').replaceChildren(...(listOf(data).length?listOf(data).map(r=>h('article',{class:'account-order'},h('div',{},h('strong',{},r.requestNumber),h('small',{},'Order '+r.orderNumber)),h('b',{},String(r.status).replaceAll('_',' ')))):[h('p',{class:'account-note'},'No return requests yet.')]))}
+async function loadReturns(){
+ const data=await api('/api/orders/returns/mine');
+ const requests=listOf(data);
+ if(!requests.length){root.querySelector('#orderList').replaceChildren(h('p',{class:'account-note'},'No return requests yet.'));return}
+ const cards=await Promise.all(requests.map(async r=>{
+  let detail=r;
+  try{detail=await api('/api/orders/returns/'+encodeURIComponent(r.requestNumber)+'/status',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})}catch(_){}
+  const labels=['requested','awaiting_return_shipment','return_in_transit','received','inspection_accepted','inspection_rejected','refund_pending','refunded','closed'];
+  const currentIndex=labels.indexOf(detail.status);
+  const timeline=h('div',{class:'account-note'},...labels.slice(0,Math.max(currentIndex+1,1)).map((status,i)=>h('div',{},(i<=currentIndex?'✓ ':'')+String(status).replaceAll('_',' '))));
+  const parts=[
+   h('div',{},h('strong',{},detail.requestNumber),h('small',{},'Order '+detail.orderNumber),h('small',{},'Reason: '+String(detail.reason||'').replaceAll('_',' ')),h('small',{},detail.rejectionReason?'Rejection reason: '+detail.rejectionReason:''),h('small',{},detail.adminNote?'Admin note: '+detail.adminNote:''),timeline)
+  ];
+  if(detail.status==='awaiting_return_shipment'){
+   parts.push(h('section',{class:'account-subbox'},h('h3',{},'Send the product'),h('p',{class:'account-note'},'Return address:',h('br'),detail.returnAddress||'The store will show the return address here.'),h('form',{class:'account-form'},h('label',{class:'checkout-field'},'Courier',h('input',{name:'courier',required:true,maxlength:'100'})),h('label',{class:'checkout-field'},'Tracking number',h('input',{name:'trackingNumber',required:true,maxlength:'100'})),h('button',{class:'checkout-btn',type:'submit'},'Submit shipment'),h('p',{class:'account-note',role:'status'}))));
+  }
+  if(detail.returnCourier||detail.returnTracking)parts.push(h('small',{},'Shipment: '+[detail.returnCourier,detail.returnTracking?'Tracking '+detail.returnTracking:''].filter(Boolean).join(' · ')));
+  const card=h('article',{class:'account-order'},...parts);
+  const form=card.querySelector('form');
+  if(form)form.addEventListener('submit',async e=>{
+   e.preventDefault();
+   const statusEl=form.querySelector('[role=status]');
+   const body=Object.fromEntries(new FormData(form));
+   try{await api('/api/orders/returns/'+encodeURIComponent(detail.requestNumber)+'/shipment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});statusEl.textContent='Shipment details submitted.';await loadReturns()}catch(error){statusEl.textContent=error.message}
+  });
+  return card;
+ }));
+ root.querySelector('#orderList').replaceChildren(...cards);
+}
 async function renderAccount(){try{account=account||await api('/api/customer/me');orders=listOf(await api('/api/orders/mine'+(showFailed?'?all=1':'')));const maskedEmail=maskEmail(account.email);root.replaceChildren(h('div',{class:'checkout-section-title'},h('div',{},h('h1',{},'Your account'),h('p',{class:'account-note'},account.name+' · '+maskedEmail)),h('button',{class:'checkout-ghost',type:'button',onclick:logout},'Sign out')),h('div',{class:'account-tabs'},...['All orders','Active','Delivered','Returns'].map(name=>h('button',{type:'button','aria-pressed':String(tab===name),onclick:async()=>{tab=name;root.querySelectorAll('.account-tabs button').forEach(b=>b.setAttribute('aria-pressed',String(b.textContent===name)));if(name==='Returns')await loadReturns();else renderOrders()}},name)),h('label',{class:'account-note'},h('input',{type:'checkbox',checked:showFailed,onchange:async e=>{showFailed=e.target.checked;orders=listOf(await api('/api/orders/mine'+(showFailed?'?all=1':'')));renderOrders()}}),' Show failed/expired')),h('div',{id:'orderList',class:'account-orders'}),h('div',{class:'account-grid'},h('section',{class:'account-subbox'},h('h2',{},'Personal information'),h('p',{},h('strong',{},'Name: '),account.name),h('p',{},h('strong',{},'Email: '),maskedEmail),h('form',{class:'account-form',id:'profileForm'},h('label',{class:'checkout-field'},'Update name',h('input',{name:'name',value:account.name,required:true,minlength:'2',maxlength:'100',autocomplete:'name'})),h('p',{class:'account-note',id:'profileMessage','aria-live':'polite'}),h('button',{class:'checkout-btn'},'Save name')))));renderOrders();document.getElementById('profileForm').addEventListener('submit',async e=>{e.preventDefault();const message=document.getElementById('profileMessage');try{account=await api('/api/customer/me',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});message.textContent='Name updated.';root.querySelector('.checkout-section-title .account-note').textContent=account.name+' · '+maskEmail(account.email);e.currentTarget.elements.name.value=account.name}catch(error){message.textContent=error.message}})}catch(error){if(error.status===401)showForm();else root.replaceChildren(h('p',{class:'account-error'},error.message||'Could not load your account.'),h('button',{type:'button',onclick:renderAccount},'Retry'))}}
 if(params.get('next')==='cart.html'||params.get('next')==='track-order.html'){api('/api/customer/me').then(()=>location.replace(params.get('next')+(params.get('oid')?'?oid='+encodeURIComponent(params.get('oid')):''))).catch(()=>showForm())}else renderAccount();
 </script></body></html>

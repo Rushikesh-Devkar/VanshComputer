@@ -30,6 +30,7 @@ exports.shippingSettingsSchema = z.object({
   freeDeliveryMinimum: z.number().int().min(0).nullable(),
   freeDeliveryEndsAt: z.union([z.string().datetime().transform((value) => new Date(value)), z.null()]),
   returnPolicyText: z.string().trim().max(2000),
+  returnAddress: z.string().trim().max(2000).optional().default(''),
   returnShippingDeduction: z.number().min(0).optional().default(0),
   gstin: z.string().trim().max(20).optional().default(''),
   gstRate: z.number().min(0).max(100).nullable().optional().default(null),

@@ -71,19 +71,54 @@ exports.status = async (req, res, next) => {
   try {
     const request = await ReturnRequest.findOne({ requestNumber: String(req.params.requestNumber).toUpperCase(), customerAccount: req.user._id }).select('-proofs');
     if (!request) return res.status(404).json({ message: 'Return request could not be verified.' });
+    const settings = await service.getSettings();
     res.json({ requestNumber: request.requestNumber, orderNumber: request.orderNumber, reason: request.reason, details: request.details,
       refundAmount: request.refundAmount, returnChargeDeducted: request.returnChargeDeducted, status: request.status,
       rejectionReason: request.rejectionReason, adminNote: request.adminNote, returnCourier: request.returnCourier, returnTracking: request.returnTracking,
-      createdAt: request.createdAt, updatedAt: request.updatedAt, statusHistory: (request.statusHistory || []).map(({ action, at }) => ({ action, at })) });
+      returnAddress: settings.returnAddress || '', createdAt: request.createdAt, updatedAt: request.updatedAt,
+      statusHistory: (request.statusHistory || []).map(({ action, at }) => ({ action, at })) });
   } catch (error) { next(error); }
 };
 
 exports.mine = async (req, res, next) => { try {
   const requests = await ReturnRequest.find({ customerAccount: req.user._id }).sort({ createdAt: -1 }).limit(100).select('-proofs -customerPhone -customerAccount -order').lean();
-  res.json({ items: requests.map(({ requestNumber, orderNumber, reason, details, refundAmount, returnChargeDeducted, status, createdAt, updatedAt, statusHistory }) =>
-    ({ requestNumber, orderNumber, reason, details, refundAmount, returnChargeDeducted, status, createdAt, updatedAt,
+  res.json({ items: requests.map(({ requestNumber, orderNumber, reason, details, refundAmount, returnChargeDeducted, status, rejectionReason, adminNote, returnCourier, returnTracking, createdAt, updatedAt, statusHistory }) =>
+    ({ requestNumber, orderNumber, reason, details, refundAmount, returnChargeDeducted, status, rejectionReason, adminNote, returnCourier, returnTracking, createdAt, updatedAt,
       statusHistory: (statusHistory || []).map(({ action, at }) => ({ action, at })) })) });
 } catch (error) { next(error); } };
+
+exports.shipment = async (req, res, next) => {
+  try {
+    const input = z.object({
+      courier: z.string().trim().min(1).max(100),
+      trackingNumber: z.string().trim().min(1).max(100),
+    }).strict().parse(req.body);
+    const request = await ReturnRequest.findOne({
+      requestNumber: String(req.params.requestNumber).trim().toUpperCase(),
+      customerAccount: req.user._id,
+    });
+    if (!request) return res.status(404).json({ message: 'Return request could not be verified.' });
+    if (request.status !== 'awaiting_return_shipment') {
+      return res.status(409).json({ message: 'This return is not awaiting shipment.' });
+    }
+    request.returnCourier = input.courier;
+    request.returnTracking = input.trackingNumber;
+    request.status = 'return_in_transit';
+    request.statusHistory.push({
+      action: 'return_in_transit',
+      actor: req.user._id,
+      detail: `${input.courier} · ${input.trackingNumber}`,
+      at: new Date(),
+    });
+    await request.save();
+    res.json({
+      requestNumber: request.requestNumber,
+      status: request.status,
+      returnCourier: request.returnCourier,
+      returnTracking: request.returnTracking,
+    });
+  } catch (error) { next(error); }
+};
 
 exports.list = async (req, res, next) => { try { res.json(await ReturnRequest.find({}).sort({ createdAt: -1 }).limit(200).select('-proofs')); } catch (error) { next(error); } };
 exports.detail = async (req, res, next) => {

@@ -13,6 +13,7 @@ const shippingSchema = new mongoose.Schema({
   freeDeliveryMinimum: { type: Number, min: 0, default: null },
   freeDeliveryEndsAt: { type: Date, default: null },
   returnPolicyText: { type: String, default: '', maxlength: 2000 },
+  returnAddress: { type: String, default: '', maxlength: 2000 },
   returnsEnabled: { type: Boolean, default: false },
   returnWindowDays: { type: Number, min: 0, max: 90, default: null },
   eligibleReasons: { type: [String], default: ['not_as_described', 'defective_or_not_working', 'damaged_in_transit', 'wrong_item'] },

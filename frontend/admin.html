@@ -77,6 +77,7 @@ body{background:#F3F6FA}.admin{max-width:none;margin:0;padding:0}.panel{backgrou
           <div class="field"><label for="freeDeliveryMinimum">Free delivery minimum order (₹, optional)</label><input id="freeDeliveryMinimum" type="number" min="0" step="1" placeholder="No minimum"></div>
           <div class="field"><label for="freeDeliveryEndsAt">Offer end date (optional)</label><input id="freeDeliveryEndsAt" type="datetime-local"></div>
           <div class="field wide"><label for="returnPolicyText">Return policy text (optional)</label><textarea id="returnPolicyText" maxlength="2000" placeholder="Leave blank until the business policy is confirmed."></textarea></div>
+          <div class="field wide"><label for="returnAddress">Store return address *</label><textarea id="returnAddress" maxlength="2000" placeholder="Customer ship-to name, address, city, state and PIN code"></textarea></div>
           <div class="field"><label style="font-weight:500"><input id="returnsEnabled" type="checkbox"> Returns enabled</label></div>
           <div class="field"><label for="returnWindowDays">Return window (days)</label><input id="returnWindowDays" type="number" min="0" max="90"></div>
           <div class="field"><label for="returnShippingMode">Return shipping</label><select id="returnShippingMode"><option value="customer_ships">Customer ships at own cost</option><option value="deduct_from_refund">Deduct flat charge from refund</option></select></div>
@@ -226,6 +227,7 @@ async function loadShippingSettings() {
   $('freeDeliveryMinimum').value = settings.freeDeliveryMinimum ?? '';
   $('freeDeliveryEndsAt').value = settings.freeDeliveryEndsAt ? new Date(settings.freeDeliveryEndsAt).toISOString().slice(0, 16) : '';
   $('returnPolicyText').value = settings.returnPolicyText || '';
+  $('returnAddress').value = settings.returnAddress || '';
   $('returnsEnabled').checked = settings.returnsEnabled === true;
   $('returnWindowDays').value = settings.returnWindowDays ?? '';
   $('returnShippingMode').value = settings.returnShippingMode || 'customer_ships';
@@ -364,6 +366,8 @@ async function openReturnDetail(item) {
       ['Status', String(detail.status || '').replaceAll('_', ' ')],
       ['Customer details', detail.details || 'None'],
       ['Admin note', detail.adminNote || 'None'],
+      ['Return courier', detail.returnCourier || 'Not submitted'],
+      ['Return tracking', detail.returnTracking || 'Not submitted'],
     ].forEach(([label, value]) => {
       const p = document.createElement('p');
       p.textContent = `${label}: ${value}`;
@@ -439,7 +443,7 @@ async function loadReturns() {
       };
       const statusLabel = String(item.status || '').replaceAll('_', ' ');
       const created = item.createdAt ? new Date(item.createdAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : 'Date unavailable';
-      row.innerHTML = `<div><strong>${item.requestNumber}</strong><br><small>${item.orderNumber} · ${reasonLabels[item.reason] || item.reason}</small><br><small>Status: ${statusLabel}</small><br><small>Refund: ₹${Number(item.refundAmount || 0).toLocaleString('en-IN')}</small><br><small>Created: ${created}</small><br><small>Admin note: ${item.adminNote || 'None'}</small></div>`;
+      row.innerHTML = `<div><strong>${item.requestNumber}</strong><br><small>${item.orderNumber} · ${reasonLabels[item.reason] || item.reason}</small><br><small>Status: ${statusLabel}</small><br><small>Refund: ₹${Number(item.refundAmount || 0).toLocaleString('en-IN')}</small><br><small>Created: ${created}</small><br><small>Admin note: ${item.adminNote || 'None'}</small><br><small>Return courier: ${item.returnCourier || 'Not submitted'}</small><br><small>Return tracking: ${item.returnTracking || 'Not submitted'}</small></div>`;
       const actions = document.createElement('div'); actions.className = 'admin-product-actions';
       const view = document.createElement('button'); view.type = 'button'; view.textContent = 'View';
       view.addEventListener('click', () => openReturnDetail(item));
@@ -484,7 +488,9 @@ $('shippingForm').addEventListener('submit', async (event) => {
     freeDeliveryEnabled: $('freeDeliveryEnabled').checked,
     freeDeliveryMinimum: $('freeDeliveryMinimum').value === '' ? null : Number($('freeDeliveryMinimum').value),
     freeDeliveryEndsAt: $('freeDeliveryEndsAt').value ? new Date($('freeDeliveryEndsAt').value).toISOString() : null,
-    returnPolicyText: $('returnPolicyText').value.trim(), gstin: $('gstin').value.trim(),
+    returnPolicyText: $('returnPolicyText').value.trim(),
+    returnAddress: $('returnAddress').value.trim(),
+    gstin: $('gstin').value.trim(),
     gstRate: $('gstRate').value === '' ? null : Number($('gstRate').value),
     returnsEnabled: $('returnsEnabled').checked,
     returnWindowDays: $('returnWindowDays').value === '' ? null : Number($('returnWindowDays').value),
