@@ -4,6 +4,7 @@ const { z } = require('zod');
 const User = require('./user.model');
 const crypto = require('crypto');
 const mailer = require('../../utils/mailer');
+const { escapeHtml } = require('../../utils/ownerAlerts');
 const DUMMY_HASH = bcrypt.hashSync('dummy-password', 12);
 const emailResetAttempts = new Map();
 const RESET_RESPONSE = 'If an account exists for that email, we have sent a reset link. Check your inbox and spam folder.';
@@ -66,8 +67,6 @@ exports.forgotPassword = async (req, res, next) => {
     setImmediate(() => processForgotPassword(email));
   } catch (error) { next(error); }
 };
-
-const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 
 async function processForgotPassword(email) {
   try {

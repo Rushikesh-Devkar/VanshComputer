@@ -3,10 +3,12 @@ const { z } = require('zod');
 const Order = require('./order.model');
 const ReturnRequest = require('./return.model');
 const WebhookEvent = require('./webhook-event.model');
+const ShippingSettings = require('./shipping.model');
 const { itemsSchema, addressSchema, quoteAddressSchema, customerSchema, trackingSchema, policyConsentSchema } = require('./schemas');
 const service = require('./order.service');
 const { normalizeIndianPhone } = require('../../utils/phone');
 const { escapeHtml, appAdminUrl, notifyOwner } = require('../../utils/ownerAlerts');
+const orderMails = require('../../utils/orderMails');
 
 const reservationMinutes = () => Math.min(60, Math.max(5, Number(process.env.PAYMENT_RESERVATION_MINUTES) || 15));
 // .env / Render mein copy-paste se aksar extra space ya capital letter aa jata hai (jaise "Live " ya key ke aage space).
@@ -393,6 +395,7 @@ async function applyCapturedPayment(order, paymentId, amountPaise, currency, sou
     });
     if (paid.modifiedCount) {
       notifyPaidOrder(order);
+      orderMails.sendOrderConfirmed(order);
       return true;
     }
   }
@@ -457,7 +460,10 @@ exports.webhook = async (req, res, next) => {
         $push: { statusHistory: { action: refundMatches ? 'refund_processed' : 'refund_amount_review', detail: refundMatches ? 'Verified refund webhook amount.' : 'Refund amount or currency did not match the requested amount.', at: new Date() } },
       });
       if (refundUpdate.modifiedCount && !refundMatches) notifyRefundReview(order, paymentId, 'Refund amount or currency did not match the requested amount.');
-      if (refundMatches) await ReturnRequest.updateOne({ order: order._id, status: 'refund_pending' }, { $set: { status: 'refunded' }, $push: { statusHistory: { action: 'refunded', detail: 'Refund webhook verified.' } } });
+      if (refundUpdate.modifiedCount && refundMatches) {
+        orderMails.sendRefundProcessed(order, refundEntity.amount / 100);
+        await ReturnRequest.updateOne({ order: order._id, status: 'refund_pending' }, { $set: { status: 'refunded' }, $push: { statusHistory: { action: 'refunded', detail: 'Refund webhook verified.' } } });
+      }
     } else if (order && eventName === 'refund.failed') {
       const refundFailed = await Order.updateOne({ _id: order._id, status: 'refund_pending' }, { $set: { status: 'refund_failed', paymentStatus: 'refund_failed', razorpayRefundId: refundEntity && refundEntity.id || '' }, $push: { statusHistory: { action: 'refund_failed', detail: 'Payment provider reported refund failure.', at: new Date() } } });
       if (refundFailed.modifiedCount) {
@@ -538,6 +544,11 @@ exports.adminUpdate = async (req, res, next) => {
       $push: { statusHistory: { action: input.status, actor: req.user._id, detail: [input.courierName, input.trackingNumber].filter(Boolean).join(' · ') } },
     }, { new: true });
     if (!updated) return res.status(409).json({ message: 'Order status changed. Reload and try again.' });
+    if (input.status === 'shipped') orderMails.sendShipped(updated);
+    if (input.status === 'delivered') {
+      const settings = await ShippingSettings.findById('maharashtra').select('returnsEnabled returnWindowDays').lean().catch(() => null);
+      orderMails.sendDelivered(updated, settings || {});
+    }
     res.json(updated);
   } catch (error) { next(error); }
 };

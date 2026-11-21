@@ -5,6 +5,7 @@ const ReturnRequest = require('./return.model');
 const { z } = require('zod');
 const service = require('./return.service');
 const { escapeHtml, appAdminUrl, notifyOwner } = require('../../utils/ownerAlerts');
+const orderMails = require('../../utils/orderMails');
 
 async function requestRefund(paymentId, amount, orderNumber) {
   const response = await fetch(`https://api.razorpay.com/v1/payments/${encodeURIComponent(paymentId)}/refund`, {
@@ -211,6 +212,22 @@ exports.action = async (req, res, next) => {
       request.order.razorpayRefundId = refund.id; request.order.status = 'refund_pending'; request.order.paymentStatus = 'refund_pending'; request.order.refundRequestedAt = new Date(); await request.order.save();
     }
     if (action === 'seen') request.adminSeenAt = new Date();
+    if (['approve', 'reject', 'refund'].includes(action)) {
+      const nextStatus = nextReturnStatus[action];
+      const $set = { status: nextStatus };
+      if (req.body && req.body.reason) $set.rejectionReason = String(req.body.reason).trim();
+      if (req.body && req.body.note) $set.adminNote = String(req.body.note).trim().slice(0, 2000);
+      const updated = await ReturnRequest.findOneAndUpdate(
+        { _id: request._id, status: request.status },
+        { $set, $push: { statusHistory: { action: nextStatus, actor: req.user._id, detail: req.body && (req.body.reason || req.body.note) || '', at: new Date() } } },
+        { new: true }
+      );
+      if (!updated) return res.status(409).json({ message: 'Return status changed. Reload and try again.' });
+      if (action === 'approve') orderMails.sendReturnStatus(updated, request.order, 'approved');
+      if (action === 'reject') orderMails.sendReturnStatus(updated, request.order, 'rejected', $set.rejectionReason || '');
+      if (action === 'refund') orderMails.sendReturnStatus(updated, request.order, 'refund_pending');
+      return res.json(updated);
+    }
     if (nextReturnStatus[action]) request.status = nextReturnStatus[action];
     if (req.body && req.body.reason) request.rejectionReason = String(req.body.reason).trim();
     if (req.body && req.body.note) request.adminNote = String(req.body.note).trim().slice(0, 2000);
