@@ -1,3 +1,40 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Track order | Vansh Computer</title><link rel="stylesheet" href="css/site.css"><link rel="stylesheet" href="css/checkout-flow.css"></head><body><div id="hdr"></div><main class="wrap"><section class="flow-card"><h1>Track your order</h1><p id="trackMessage">Checking your customer account…</p><form id="trackForm"><label class="checkout-field">Order number<input id="oid" required maxlength="24"></label><button class="checkout-btn">View order</button></form></section></main><div id="ftr"></div><script src="js/business.js"></script><script src="js/common.js"></script><script>
-renderChrome();const params=new URLSearchParams(location.search),input=document.getElementById('oid'),form=document.getElementById('trackForm');input.value=params.get('oid')||params.get('order')||'';api('/api/customer/me').then(()=>{document.getElementById('trackMessage').textContent='Enter your order number to view its latest status.';if(input.value)location.replace('order-detail.html?order='+encodeURIComponent(input.value))}).catch(()=>location.replace('account.html?next=track-order.html'+(input.value?'&oid='+encodeURIComponent(input.value):'')));form.addEventListener('submit',e=>{e.preventDefault();location.href='order-detail.html?order='+encodeURIComponent(input.value.trim())});
+renderChrome();
+const params=new URLSearchParams(location.search),
+  input=document.getElementById('oid'),
+  form=document.getElementById('trackForm'),
+  message=document.getElementById('trackMessage');
+input.value=params.get('oid')||params.get('order')||'';
+
+api('/api/customer/me').then(async()=>{
+  if(input.value){
+    location.replace('order-detail.html?order='+encodeURIComponent(input.value));
+    return;
+  }
+  form.hidden=true;
+  message.textContent='Loading your latest order…';
+  try{
+    const order=await api('/api/orders/track',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:'{}'
+    });
+    location.replace('order-detail.html?order='+encodeURIComponent(order.orderNumber));
+  }catch(error){
+    if(error.status===404){
+      message.textContent='You do not have any orders to track yet.';
+      form.hidden=true;
+    }else{
+      message.textContent=error.message||'Could not load your order.';
+    }
+  }
+}).catch(()=>{
+  message.textContent='Sign in to track an order from your account.';
+  if(input.value)location.replace('account.html?next=track-order.html&oid='+encodeURIComponent(input.value));
+});
+
+form.addEventListener('submit',e=>{
+  e.preventDefault();
+  location.href='order-detail.html?order='+encodeURIComponent(input.value.trim());
+});
 </script></body></html>

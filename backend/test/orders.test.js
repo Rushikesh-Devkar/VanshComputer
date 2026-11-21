@@ -29,6 +29,7 @@ test('delivery address rejects states other than Maharashtra', () => {
 
 test('tracking schema accepts only an order number', () => {
   assert.equal(trackingSchema.parse({ orderNumber: 'VC20261025-ABCDEF12' }).orderNumber, 'VC20261025-ABCDEF12');
+  assert.equal(trackingSchema.parse({}).orderNumber, undefined);
   assert.throws(() => trackingSchema.parse({ orderNumber: 'VC20261025-ABCDEF12', phone: '9999999999' }));
 });
 
@@ -48,6 +49,35 @@ test('tracking requires customer login and returns 404 for another customer orde
     await controller.track({ body: { orderNumber: 'VC20261025-ABCDEF12' }, user: { _id: 'customer-two' } }, response, (error) => { throw error; });
     assert.deepEqual(query, { orderNumber: 'VC20261025-ABCDEF12', customerAccount: 'customer-two' });
     assert.equal(status, 404); assert.equal(body.message, 'Order details could not be verified.');
+  } finally { Order.findOne = original; }
+});
+
+test('logged-in tracking without an order number selects the latest customer order', async () => {
+  const original = Order.findOne;
+  let query;
+  let sort;
+  Order.findOne = (value) => {
+    query = value;
+    return {
+      select() {
+        return {
+          sort(value) {
+            sort = value;
+            return Promise.resolve({ orderNumber: 'VC20261121-12345678', status: 'shipped' });
+          }
+        };
+      }
+    };
+  };
+  try {
+    const response = {
+      status() { return this; },
+      json(value) { this.body = value; return this; }
+    };
+    await controller.track({ body: {}, user: { _id: 'customer-one' } }, response, (error) => { throw error; });
+    assert.deepEqual(query, { customerAccount: 'customer-one' });
+    assert.deepEqual(sort, { createdAt: -1 });
+    assert.equal(response.body.orderNumber, 'VC20261121-12345678');
   } finally { Order.findOne = original; }
 });
 

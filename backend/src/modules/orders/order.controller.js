@@ -312,8 +312,11 @@ exports.webhook = async (req, res, next) => {
 exports.track = async (req, res, next) => {
   try {
     const input = trackingSchema.parse(req.body);
-    const order = await Order.findOne({ orderNumber: input.orderNumber.toUpperCase(), customerAccount: req.user._id })
-      .select('orderNumber status paymentStatus items total shippingCharge address statusHistory trackingNumber courierName deliveredAt createdAt updatedAt');
+    const filter = { customerAccount: req.user._id };
+    if (input.orderNumber) filter.orderNumber = input.orderNumber.toUpperCase();
+    let query = Order.findOne(filter).select('orderNumber status paymentStatus items total shippingCharge address statusHistory trackingNumber courierName deliveredAt createdAt updatedAt');
+    if (!input.orderNumber) query = query.sort({ createdAt: -1 });
+    const order = await query;
     if (!order) return res.status(404).json({ message: 'Order details could not be verified.' });
     res.json({ orderNumber: order.orderNumber, status: order.status, paymentStatus: order.paymentStatus,
       items: order.items, total: order.total, shippingCharge: order.shippingCharge,

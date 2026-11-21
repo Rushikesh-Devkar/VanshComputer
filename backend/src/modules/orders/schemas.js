@@ -43,5 +43,5 @@ exports.shippingSettingsSchema = z.object({
   gstCalculationEnabled: z.boolean().optional().default(false),
 }).strict();
 exports.trackingSchema = z.object({
-  orderNumber: z.string().trim().regex(/^VC\d{8}-[A-F\d]{8}$/i),
+  orderNumber: z.string().trim().regex(/^VC\d{8}-[A-F\d]{8}$/i).optional(),
 }).strict();
