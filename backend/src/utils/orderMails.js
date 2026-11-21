@@ -52,6 +52,15 @@ function sendDelivered(order, settings = {}) {
   });
 }
 
+function sendDeliveryOtp(order, otp) {
+  const link = orderDetailLink(order);
+  sendCustomerMail(order, {
+    subject: `Delivery OTP: ${order.orderNumber || ''}`,
+    text: `Your delivery OTP is ${otp}. Share this OTP only with the delivery person when you receive your parcel.\nOrder: ${order.orderNumber || ''}\nView order: ${link}`,
+    html: `<p><strong>Your delivery OTP:</strong> ${escapeHtml(otp)}</p><p>Share this OTP only with the delivery person when you receive your parcel.</p><p>Order: ${escapeHtml(order.orderNumber || '')}</p><p><a href="${escapeHtml(link)}">View order</a></p>`,
+  });
+}
+
 function sendRefundProcessed(order, amount) {
   const link = orderDetailLink(order);
   sendCustomerMail(order, {
@@ -90,6 +99,7 @@ module.exports = {
   sendOrderConfirmed,
   sendShipped,
   sendDelivered,
+  sendDeliveryOtp,
   sendRefundProcessed,
   sendReturnStatus,
   sendCustomerMail,

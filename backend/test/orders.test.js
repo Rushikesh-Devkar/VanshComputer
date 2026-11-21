@@ -414,6 +414,86 @@ test('webhook after verify payment has no double capture effect', async () => {
   }
 });
 
+test('delivery OTP rejects wrong attempts and locks after five', async () => {
+  const crypto = require('node:crypto');
+  const originalFindById = Order.findById;
+  const originalFindOneAndUpdate = Order.findOneAndUpdate;
+  let attempts = 0;
+  const order = {
+    _id: 'order-db-id',
+    orderNumber: 'VC20261121-12345678',
+    status: 'shipped',
+    deliveryOtpAttempts: 0,
+    deliveryOtpExpiresAt: new Date(Date.now() + 600000),
+    deliveryOtpHash: crypto.createHash('sha256').update('VC20261121-12345678:123456').digest('hex'),
+  };
+  Order.findById = () => ({ select: async () => order });
+  Order.findOneAndUpdate = (filter) => {
+    if (filter.deliveryOtpAttempts) {
+      attempts++;
+      order.deliveryOtpAttempts = attempts;
+      return { select: async () => ({ deliveryOtpAttempts: attempts }) };
+    }
+    return null;
+  };
+  try {
+    const response = { status(code) { this.statusCode = code; return this; }, json(value) { this.body = value; return this; } };
+    await controller.adminUpdate({ params: { id: 'order-db-id' }, body: { status: 'delivered', otp: '654321' }, user: { _id: 'manager-one', role: 'manager' } }, response, (error) => { throw error; });
+    assert.equal(response.statusCode, 400);
+    assert.equal(attempts, 1);
+  } finally {
+    Order.findById = originalFindById;
+    Order.findOneAndUpdate = originalFindOneAndUpdate;
+  }
+
+  order.deliveryOtpAttempts = 5;
+  Order.findById = () => ({ select: async () => order });
+  try {
+    const response = { status(code) { this.statusCode = code; return this; }, json(value) { this.body = value; return this; } };
+    await controller.adminUpdate({ params: { id: 'order-db-id' }, body: { status: 'delivered', otp: '654321' }, user: { _id: 'manager-one', role: 'manager' } }, response, (error) => { throw error; });
+    assert.equal(response.statusCode, 423);
+  } finally {
+    Order.findById = originalFindById;
+  }
+});
+
+test('delivery OTP owner override and correct OTP mark delivered', async () => {
+  const crypto = require('node:crypto');
+  const originalFindById = Order.findById;
+  const originalFindOneAndUpdate = Order.findOneAndUpdate;
+  const order = {
+    _id: 'order-db-id',
+    orderNumber: 'VC20261121-12345678',
+    status: 'shipped',
+    deliveryOtpAttempts: 5,
+    deliveryOtpExpiresAt: new Date(Date.now() + 600000),
+    deliveryOtpHash: crypto.createHash('sha256').update('VC20261121-12345678:123456').digest('hex'),
+  };
+  try {
+    Order.findById = () => ({ select: async () => order });
+    Order.findOneAndUpdate = (_filter) => Promise.resolve({ ...order, status: 'delivered', deliveredAt: new Date() });
+    let body;
+    const overrideResponse = { status(code) { this.statusCode = code; return this; }, json(value) { body = value; return this; } };
+    await controller.adminUpdate({ params: { id: 'order-db-id' }, body: { status: 'delivered', override: true, reason: 'Customer confirmed by phone' }, user: { _id: 'owner-one', role: 'owner' } }, overrideResponse, (error) => { throw error; });
+    assert.equal(body.status, 'delivered');
+  } finally {
+    Order.findById = originalFindById;
+  }
+
+  order.deliveryOtpAttempts = 0;
+  try {
+    Order.findById = () => ({ select: async () => order });
+    Order.findOneAndUpdate = (_filter) => Promise.resolve({ ...order, status: 'delivered', deliveredAt: new Date() });
+    let body;
+    const correctResponse = { status(code) { this.statusCode = code; return this; }, json(value) { body = value; return this; } };
+    await controller.adminUpdate({ params: { id: 'order-db-id' }, body: { status: 'delivered', otp: '123456' }, user: { _id: 'manager-one', role: 'manager' } }, correctResponse, (error) => { throw error; });
+    assert.equal(body.status, 'delivered');
+  } finally {
+    Order.findById = originalFindById;
+    Order.findOneAndUpdate = originalFindOneAndUpdate;
+  }
+});
+
 test('payment.failed webhook keeps the reservation so the customer can retry in the same popup', async () => {
   const crypto = require('node:crypto');
   const WebhookEvent = require('../src/modules/orders/webhook-event.model');

@@ -155,6 +155,7 @@ let editingProductId = '';
 let currentImageCount = 0;
 let productPhotoPreviews = [];
 let leadPage = 1;
+let currentAdminRole = '';
 const showError = (el, message) => { el.textContent = message; el.classList.add('error'); };
 const clearStatus = (el) => { el.textContent = ''; el.classList.remove('error'); };
 async function request(path, options) {
@@ -294,7 +295,16 @@ async function loadOrders() {
         button('Mark shipped', () => update('shipped', { courierName: courier.value.trim(), trackingNumber: trackingNo.value.trim() }));
         button('Request full refund', async () => { if (!confirm(`Request a full verified-provider refund for ${order.orderNumber}?`)) return; await request('/api/orders/admin/' + encodeURIComponent(order._id) + '/refund', { method: 'POST' }); await loadOrders(); });
       }
-      if (order.status === 'shipped') button('Mark delivered', () => update('delivered'));
+      if (order.status === 'shipped') button('Mark delivered', () => {
+        const otp = prompt('Enter the 6-digit customer Delivery OTP');
+        if (otp) return update('delivered', { otp: otp.trim() });
+        if (currentAdminRole === 'owner' && confirm('Owner override delivery without OTP?')) {
+          const reason = prompt('Owner override reason');
+          if (!reason) return Promise.reject(new Error('Owner override reason is required.'));
+          return update('delivered', { override: true, reason: reason.trim() });
+        }
+        return Promise.reject(new Error('Delivery OTP is required.'));
+      });
       if (order.status === 'pending_payment') button('Cancel and release stock', () => update('cancelled'));
       if (order.status === 'refund_failed') button('Retry full refund', async () => { if (!confirm(`Retry a full refund for ${order.orderNumber}?`)) return; await request('/api/orders/admin/' + encodeURIComponent(order._id) + '/refund', { method: 'POST' }); await loadOrders(); });
       if (actions.childElementCount) row.append(actions);
@@ -594,6 +604,7 @@ async function loadLeads() {
 
 async function openEditor(user) {
   if (!['owner', 'manager', 'inventory', 'sales'].includes(user.role)) throw new Error('Owner, manager, inventory, or sales access is required.');
+  currentAdminRole = user.role;
   $('loginPanel').style.display = 'none'; $('dashboard').style.display = 'block'; $('productsPanel').style.display = 'block'; $('logout').hidden = false;
   const owner = ['owner', 'manager'].includes(user.role);
   const sales = user.role === 'sales';

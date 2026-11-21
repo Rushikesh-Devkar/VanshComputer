@@ -68,6 +68,11 @@ const orderSchema = new mongoose.Schema({
   reservationExpiresAt: { type: Date, required: true, index: true },
   courierName: { type: String, default: '' },
   trackingNumber: { type: String, default: '' },
+  deliveryOtpHash: { type: String, default: '', select: false },
+  deliveryOtpEncrypted: { type: String, default: '', select: false },
+  deliveryOtpExpiresAt: { type: Date, default: null },
+  deliveryOtpAttempts: { type: Number, default: 0, min: 0, max: 5 },
+  deliveryOtpVerifiedAt: { type: Date, default: null },
   statusHistory: { type: [auditSchema], default: [] },
 }, { timestamps: true, versionKey: false });
 

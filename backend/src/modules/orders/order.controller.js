@@ -9,8 +9,44 @@ const service = require('./order.service');
 const { normalizeIndianPhone } = require('../../utils/phone');
 const { escapeHtml, appAdminUrl, notifyOwner } = require('../../utils/ownerAlerts');
 const orderMails = require('../../utils/orderMails');
+const { sendSms } = require('../../utils/sms');
 
 const reservationMinutes = () => Math.min(60, Math.max(5, Number(process.env.PAYMENT_RESERVATION_MINUTES) || 15));
+const deliveryOtpHash = (orderNumber, otp) =>
+  crypto.createHash('sha256').update(`${orderNumber}:${otp}`).digest('hex');
+
+function deliveryOtpKey() {
+  return crypto.createHash('sha256').update(String(process.env.JWT_SECRET || '')).digest();
+}
+
+function encryptDeliveryOtp(otp) {
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', deliveryOtpKey(), iv);
+  const encrypted = Buffer.concat([cipher.update(String(otp), 'utf8'), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return `${iv.toString('base64')}.${tag.toString('base64')}.${encrypted.toString('base64')}`;
+}
+
+function decryptDeliveryOtp(payload) {
+  try {
+    const [ivPart, tagPart, encryptedPart] = String(payload || '').split('.');
+    if (!ivPart || !tagPart || !encryptedPart) return '';
+    const decipher = crypto.createDecipheriv(
+      'aes-256-gcm',
+      deliveryOtpKey(),
+      Buffer.from(ivPart, 'base64')
+    );
+    decipher.setAuthTag(Buffer.from(tagPart, 'base64'));
+    return Buffer.concat([
+      decipher.update(Buffer.from(encryptedPart, 'base64')),
+      decipher.final(),
+    ]).toString('utf8');
+  } catch (_) {
+    return '';
+  }
+}
+
+exports.decryptDeliveryOtp = decryptDeliveryOtp;
 // Environment normalization is performed by src/config/env.js when the app loads.
 for (const name of ['PAYMENT_MODE', 'RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET', 'RAZORPAY_WEBHOOK_SECRET']) {
   if (typeof process.env[name] === 'string') process.env[name] = process.env[name].trim();
@@ -203,15 +239,21 @@ exports.accountOrders = async (req, res, next) => {
 exports.mineDetail = async (req, res, next) => {
   try {
     const order = await Order.findOne({ orderNumber: String(req.params.orderNumber).trim().toUpperCase(), customerAccount: req.user._id })
-      .select('orderNumber items address subtotal discount shippingCharge total currency status paymentStatus razorpayPaymentId courierName trackingNumber deliveredAt createdAt statusHistory')
+      .select('+deliveryOtpEncrypted orderNumber items address subtotal discount shippingCharge total currency status paymentStatus razorpayPaymentId courierName trackingNumber deliveredAt createdAt statusHistory deliveryOtpExpiresAt')
       .lean();
     if (!order) return res.status(404).json({ message: 'Order details could not be verified.' });
     const items = (order.items || []).map(({ name, imageUrl, quantity, unitPrice, originalPrice, lineTotal, warrantyMonths, type }) =>
       ({ name, imageUrl, quantity, unitPrice, originalPrice, lineTotal, warrantyMonths, type }));
+    let deliveryOtp = '';
+    if (order.status === 'shipped' && order.deliveryOtpEncrypted && order.deliveryOtpExpiresAt && new Date(order.deliveryOtpExpiresAt) > new Date()) {
+      deliveryOtp = decryptDeliveryOtp(order.deliveryOtpEncrypted);
+    }
     res.json({ orderNumber: order.orderNumber, items, address: order.address, subtotal: order.subtotal, discount: order.discount,
       shippingCharge: order.shippingCharge, total: order.total, currency: order.currency, status: order.status, paymentStatus: order.paymentStatus,
       ...(order.paymentStatus === 'captured' ? { paymentId: order.razorpayPaymentId } : {}), courierName: order.courierName, trackingNumber: order.trackingNumber,
-      deliveredAt: order.deliveredAt, createdAt: order.createdAt, statusHistory: (order.statusHistory || []).map(({ action, at }) => ({ action, at })) });
+      deliveredAt: order.deliveredAt, createdAt: order.createdAt,
+      ...(deliveryOtp ? { deliveryOtp } : {}),
+      statusHistory: (order.statusHistory || []).map(({ action, at }) => ({ action, at })) });
   } catch (error) { next(error); }
 };
 
@@ -519,8 +561,11 @@ exports.adminUpdate = async (req, res, next) => {
       status: z.enum(['processing', 'shipped', 'delivered', 'cancelled']),
       courierName: z.string().trim().max(100).optional(),
       trackingNumber: z.string().trim().max(100).optional(),
+      otp: z.string().regex(/^\d{6}$/).optional(),
+      override: z.boolean().optional(),
+      reason: z.string().trim().min(1).max(500).optional(),
     }).strict().parse(req.body);
-    const order = await Order.findById(req.params.id);
+    const order = await Order.findById(req.params.id).select('+deliveryOtpHash +deliveryOtpEncrypted');
     if (!order) return res.status(404).json({ message: 'Order not found.' });
     const allowed = {
       paid: ['processing', 'cancelled'], processing: ['shipped', 'cancelled'], shipped: ['delivered'],
@@ -533,16 +578,77 @@ exports.adminUpdate = async (req, res, next) => {
     }
     if (input.status === 'cancelled') return res.status(409).json({ message: 'Paid orders require the verified refund action before cancellation.' });
     if (input.status === 'shipped' && (!input.courierName || !input.trackingNumber)) return res.status(400).json({ message: 'Courier name and tracking number are required before shipping.' });
+
+    if (input.status === 'delivered') {
+      if (input.override) {
+        if (req.user.role !== 'owner') return res.status(403).json({ message: 'Only an owner can override delivery OTP verification.' });
+        if (!input.reason) return res.status(400).json({ message: 'An owner override reason is required.' });
+      } else {
+        if (!input.otp) return res.status(400).json({ message: 'Delivery OTP is required.' });
+        if (Number(order.deliveryOtpAttempts || 0) >= 5) {
+          return res.status(423).json({ message: 'Delivery OTP is locked after 5 wrong attempts. Owner override is required.' });
+        }
+        if (!order.deliveryOtpHash || !order.deliveryOtpExpiresAt || new Date(order.deliveryOtpExpiresAt) <= new Date()) {
+          return res.status(400).json({ message: 'Delivery OTP is missing or expired.' });
+        }
+        const suppliedHash = deliveryOtpHash(order.orderNumber, input.otp);
+        const expected = Buffer.from(order.deliveryOtpHash, 'hex');
+        const supplied = Buffer.from(suppliedHash, 'hex');
+        const matches = expected.length === supplied.length && crypto.timingSafeEqual(expected, supplied);
+        if (!matches) {
+          const attempt = await Order.findOneAndUpdate(
+            { _id: order._id, status: 'shipped', deliveryOtpAttempts: { $lt: 5 } },
+            { $inc: { deliveryOtpAttempts: 1 } },
+            { new: true }
+          ).select('deliveryOtpAttempts');
+          if (!attempt) return res.status(409).json({ message: 'Order status changed. Reload and try again.' });
+          if (attempt.deliveryOtpAttempts >= 5) {
+            return res.status(423).json({ message: 'Delivery OTP is locked after 5 wrong attempts. Owner override is required.' });
+          }
+          return res.status(400).json({ message: `Incorrect delivery OTP. ${5 - attempt.deliveryOtpAttempts} attempt(s) remaining.` });
+        }
+      }
+    }
+
+    let generatedOtp = '';
+    if (input.status === 'shipped') {
+      generatedOtp = String(crypto.randomInt(100000, 1000000));
+    }
     const update = { status: input.status };
     if (input.status === 'delivered') update.deliveredAt = order.deliveredAt || new Date();
     if (input.courierName != null) update.courierName = input.courierName;
     if (input.trackingNumber != null) update.trackingNumber = input.trackingNumber;
+    if (input.status === 'shipped') {
+      update.deliveryOtpHash = deliveryOtpHash(order.orderNumber, generatedOtp);
+      update.deliveryOtpEncrypted = encryptDeliveryOtp(generatedOtp);
+      update.deliveryOtpExpiresAt = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000);
+      update.deliveryOtpAttempts = 0;
+      update.deliveryOtpVerifiedAt = null;
+    }
+    if (input.status === 'delivered') {
+      if (input.override) {
+        update.deliveryOtpVerifiedAt = new Date();
+      } else {
+        update.deliveryOtpVerifiedAt = new Date();
+        update.deliveryOtpAttempts = 0;
+      }
+      update.deliveryOtpHash = '';
+      update.deliveryOtpEncrypted = '';
+      update.deliveryOtpExpiresAt = null;
+    }
+    const detail = input.status === 'delivered' && input.override
+      ? `Owner delivery override: ${input.reason}`
+      : [input.courierName, input.trackingNumber].filter(Boolean).join(' · ');
     const updated = await Order.findOneAndUpdate({ _id: order._id, status: order.status }, {
       $set: update,
-      $push: { statusHistory: { action: input.status, actor: req.user._id, detail: [input.courierName, input.trackingNumber].filter(Boolean).join(' · ') } },
+      $push: { statusHistory: { action: input.status, actor: req.user._id, detail } },
     }, { new: true });
     if (!updated) return res.status(409).json({ message: 'Order status changed. Reload and try again.' });
-    if (input.status === 'shipped') orderMails.sendShipped(updated);
+    if (input.status === 'shipped') {
+      orderMails.sendShipped(updated);
+      orderMails.sendDeliveryOtp(updated, generatedOtp);
+      sendSms(updated.customer?.phone, `Vansh Computer delivery OTP for order ${updated.orderNumber}: ${generatedOtp}. Share this OTP only with the delivery person when you receive your parcel.`);
+    }
     if (input.status === 'delivered') {
       const settings = await ShippingSettings.findById('maharashtra').select('returnsEnabled returnWindowDays').lean().catch(() => null);
       orderMails.sendDelivered(updated, settings || {});
