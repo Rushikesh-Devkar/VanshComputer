@@ -303,12 +303,25 @@ async function loadReturns() {
     document.title = unread ? `(${unread}) Admin | Vansh Computer` : 'Admin | Vansh Computer';
     list.replaceChildren(...rows.map((item) => {
       const row = document.createElement('article'); row.className = 'admin-product';
-      row.innerHTML = `<div><strong>${item.requestNumber}</strong><br><small>${item.orderNumber} · ${item.reason} · ${item.status}</small><br><small>Refund: ₹${Number(item.refundAmount || 0).toLocaleString('en-IN')}</small></div>`;
+      const reasonLabels = {
+        not_as_described: 'Not as described',
+        defective_or_not_working: 'Defective or not working',
+        damaged_in_transit: 'Damaged in transit',
+        wrong_item: 'Wrong item',
+      };
+      const statusLabel = String(item.status || '').replaceAll('_', ' ');
+      const created = item.createdAt ? new Date(item.createdAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : 'Date unavailable';
+      row.innerHTML = `<div><strong>${item.requestNumber}</strong><br><small>${item.orderNumber} · ${reasonLabels[item.reason] || item.reason}</small><br><small>Status: ${statusLabel}</small><br><small>Refund: ₹${Number(item.refundAmount || 0).toLocaleString('en-IN')}</small><br><small>Created: ${created}</small><br><small>Admin note: ${item.adminNote || 'None'}</small></div>`;
       const actions = document.createElement('div'); actions.className = 'admin-product-actions';
-      const action = (label, name, reasonRequired = false) => { const button = document.createElement('button'); button.type = 'button'; button.textContent = label; button.addEventListener('click', async () => { const reason = reasonRequired ? prompt('Reason') : ''; if (reasonRequired && !reason) return; try { await request(`/api/orders/admin/returns/${encodeURIComponent(item._id)}/${name}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) }); await loadReturns(); } catch (error) { alert(error.message); } }); actions.append(button); };
-      if (item.status === 'requested') { action('Approve', 'approve'); action('Reject', 'reject', true); }
-      if (item.status === 'received') { action('Accept inspection', 'inspection-accepted'); action('Reject inspection', 'inspection-rejected', true); }
+      const action = (label, name, reasonRequired = false, noteOptional = false) => { const button = document.createElement('button'); button.type = 'button'; button.textContent = label; button.addEventListener('click', async () => { const reason = reasonRequired ? prompt('Reason') : ''; if (reasonRequired && !reason) return; const note = noteOptional ? prompt('Admin note (optional)') : ''; try { await request(`/api/orders/admin/returns/${encodeURIComponent(item._id)}/${name}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason, note }) }); await loadReturns(); } catch (error) { alert(error.message); } }); actions.append(button); };
+      const view = document.createElement('button'); view.type = 'button'; view.textContent = 'View';
+      view.addEventListener('click', async () => { try { if (!item.adminSeenAt) await request(`/api/orders/admin/returns/${encodeURIComponent(item._id)}/seen`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) }); await loadReturns(); } catch (error) { alert(error.message); } });
+      actions.append(view);
+      if (item.status === 'requested') { action('Approve', 'approve', false, true); action('Reject', 'reject', true); }
+      if (['awaiting_return_shipment', 'return_in_transit'].includes(item.status)) action('Mark received', 'received', false, true);
+      if (item.status === 'received') { action('Accept inspection', 'inspection-accepted', false, true); action('Reject inspection', 'inspection-rejected', true, true); }
       if (item.status === 'inspection_accepted') action('Issue refund', 'refund');
+      if (['rejected', 'refunded', 'inspection_rejected'].includes(item.status)) action('Close', 'close');
       row.append(actions); return row;
     }));
   } catch (error) { list.replaceChildren(Object.assign(document.createElement('p'), { className: 'status error', textContent: error.message })); }

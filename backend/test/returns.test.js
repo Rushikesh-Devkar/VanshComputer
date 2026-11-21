@@ -37,6 +37,15 @@ test('return requests expose only manager/owner actions through route middleware
   assert.ok(protectedPaths.every((layer) => layer.route.stack.length === 3));
 });
 
+test('return transition table supports close and received shipment states', () => {
+  assert.ok(controller.returnTransitions.close.includes('rejected'));
+  assert.ok(controller.returnTransitions.close.includes('refunded'));
+  assert.ok(controller.returnTransitions.close.includes('inspection_rejected'));
+  assert.equal(controller.nextReturnStatus.close, 'closed');
+  assert.ok(controller.returnTransitions.received.includes('awaiting_return_shipment'));
+  assert.ok(controller.returnTransitions.received.includes('return_in_transit'));
+});
+
 test('customer return routes require login and another account receives 404', async () => {
   const router = require('../src/modules/orders/return.routes');
   const createRoute = router.stack.find((layer) => layer.route && layer.route.path === '/:orderNumber/returns');

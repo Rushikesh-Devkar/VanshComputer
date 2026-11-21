@@ -88,19 +88,38 @@ exports.mine = async (req, res, next) => { try {
 exports.list = async (req, res, next) => { try { res.json(await ReturnRequest.find({}).sort({ createdAt: -1 }).limit(200).select('-proofs')); } catch (error) { next(error); } };
 exports.detail = async (req, res, next) => { try { const value = await ReturnRequest.findById(req.params.id).populate('order'); if (!value) return res.status(404).json({ message: 'Return request not found.' }); res.json(value); } catch (error) { next(error); } };
 
+const returnTransitions = {
+  seen: ['requested', 'approved', 'rejected', 'awaiting_return_shipment', 'return_in_transit', 'received', 'inspection_accepted', 'inspection_rejected', 'refund_pending', 'refunded', 'closed'],
+  approve: ['requested'],
+  reject: ['requested', 'approved'],
+  received: ['awaiting_return_shipment', 'return_in_transit', 'approved'],
+  'inspection-accepted': ['received'],
+  'inspection-rejected': ['received'],
+  refund: ['inspection_accepted'],
+  close: ['rejected', 'refunded', 'inspection_rejected'],
+};
+
+const nextReturnStatus = {
+  seen: null,
+  approve: 'awaiting_return_shipment',
+  reject: 'rejected',
+  received: 'received',
+  'inspection-accepted': 'inspection_accepted',
+  'inspection-rejected': 'inspection_rejected',
+  refund: 'refund_pending',
+  close: 'closed',
+};
+
+exports.returnTransitions = returnTransitions;
+exports.nextReturnStatus = nextReturnStatus;
+
 exports.action = async (req, res, next) => {
   try {
-    const action = z.enum(['seen', 'approve', 'reject', 'received', 'inspection-accepted', 'inspection-rejected', 'refund']).parse(req.params.action);
+    const action = z.enum(['seen', 'approve', 'reject', 'received', 'inspection-accepted', 'inspection-rejected', 'refund', 'close']).parse(req.params.action);
     const request = await ReturnRequest.findById(req.params.id).populate('order');
     if (!request) return res.status(404).json({ message: 'Return request not found.' });
     if (action === 'reject' || action === 'inspection-rejected') z.string().trim().min(1).parse(req.body.reason);
-    const transitions = {
-      seen: ['requested'], approve: ['requested'], reject: ['requested', 'approved'],
-      received: ['awaiting_return_shipment', 'return_in_transit', 'approved'],
-      'inspection-accepted': ['received'], 'inspection-rejected': ['received'], refund: ['inspection_accepted'],
-    };
-    const nextStatus = { seen: 'requested', approve: 'approved', reject: 'rejected', received: 'received', 'inspection-accepted': 'inspection_accepted', 'inspection-rejected': 'inspection_rejected', refund: 'refund_pending' }[action];
-    if (!(transitions[action] || []).includes(request.status)) return res.status(409).json({ message: 'Invalid return status transition.' });
+    if (!(returnTransitions[action] || []).includes(request.status)) return res.status(409).json({ message: 'Invalid return status transition.' });
     if (action === 'refund') {
       if (!request.order.razorpayPaymentId) return res.status(409).json({ message: 'No captured payment is available for refund.' });
       if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) return res.status(503).json({ message: 'Payment provider is not configured.' });
@@ -109,8 +128,7 @@ exports.action = async (req, res, next) => {
       request.order.razorpayRefundId = refund.id; request.order.status = 'refund_pending'; request.order.paymentStatus = 'refund_pending'; request.order.refundRequestedAt = new Date(); await request.order.save();
     }
     if (action === 'seen') request.adminSeenAt = new Date();
-    if (action === 'approve') request.status = 'awaiting_return_shipment';
-    else request.status = nextStatus;
+    if (nextReturnStatus[action]) request.status = nextReturnStatus[action];
     if (req.body && req.body.reason) request.rejectionReason = String(req.body.reason).trim();
     if (req.body && req.body.note) request.adminNote = String(req.body.note).trim().slice(0, 2000);
     request.statusHistory.push({ action: request.status, actor: req.user._id, detail: req.body && (req.body.reason || req.body.note) || '' });
