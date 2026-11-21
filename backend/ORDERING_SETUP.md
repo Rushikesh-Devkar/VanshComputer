@@ -13,7 +13,7 @@
 3. Install dependencies and run checks: `npm install`, then `npm test`.
 4. Start the app with `npm run dev`.
 5. Sign into `admin.html` with an owner or manager account. If no owner exists, create one from `backend` with `node scripts/createOwner.js owner@example.com "a-password-at-least-10-chars" "Owner"`. In Shipping Settings, configure the Maharashtra courier charge whenever free delivery has a minimum/end date or is turned off. Free delivery starts enabled with no minimum and no end date.
-6. In the selected Razorpay mode, configure the webhook URL as `https://<your-host>/api/orders/webhook` and subscribe to payment captured/failed, order paid, and refund processed/failed events. Keep the webhook secret in the server environment only.
+6. In the selected Razorpay mode, enable Auto Capture in the Razorpay dashboard, configure the webhook URL as `https://<your-host>/api/orders/webhook`, and subscribe to these exact events: `payment.captured`, `payment.failed`, `order.paid`, `refund.processed`, and `refund.failed`. Keep the webhook secret in the server environment only.
 
 The cart quote and final order both use current MongoDB prices and server-side shipping settings. The final order reserves stock inside a transaction. A background worker and payment endpoints release unpaid reservations after the configured period. Customer tracking and return requests require the signed-in customer account that owns the order. Admin order and shipping writes require owner/manager authentication.
 
@@ -34,7 +34,7 @@ The cart quote and final order both use current MongoDB prices and server-side s
 
 ## Payment and tax behavior
 
-The API creates Razorpay orders server-side in paise. Browser callbacks are signature-checked but do not mark an order paid; verified webhooks make that transition. If credentials are absent, incomplete, or mismatched with `PAYMENT_MODE`, checkout returns a setup message and creates no order or reservation.
+The API creates Razorpay orders server-side in paise. Browser callbacks are signature-checked and payment verification checks the captured Razorpay payment server-side; verified captured payments mark an order paid, while delayed or unavailable provider lookups wait for the webhook. If credentials are absent, incomplete, or mismatched with `PAYMENT_MODE`, checkout returns a setup message and creates no order or reservation. Auto Capture must remain ON.
 
 Seller GSTIN, optional buyer GSTIN, product HSN codes, and a configured rate are stored as invoice setup fields only. Tax is not calculated, and the customer confirmation page is an order receipt, not a GST tax invoice. Configure and verify the business GSTIN, product HSN classifications, applicable tax rates, and place-of-supply treatment before enabling invoice calculations. Return policy text is configurable in Shipping Settings and starts blank.
 

@@ -273,6 +273,147 @@ test('create reuses a live prior checkout but rejects an expired prior checkout'
   }
 });
 
+test('verifyPayment marks a matching captured Razorpay payment paid', async () => {
+  const crypto = require('node:crypto');
+  const saved = {
+    mode: process.env.PAYMENT_MODE,
+    keyId: process.env.RAZORPAY_KEY_ID,
+    keySecret: process.env.RAZORPAY_KEY_SECRET,
+    webhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET,
+  };
+  const originalFetch = global.fetch;
+  const originalFindOne = Order.findOne;
+  const originalFindById = Order.findById;
+  const originalUpdateOne = Order.updateOne;
+  try {
+    process.env.PAYMENT_MODE = 'test';
+    process.env.RAZORPAY_KEY_ID = 'rzp_test_example123';
+    process.env.RAZORPAY_KEY_SECRET = 'test-secret';
+    process.env.RAZORPAY_WEBHOOK_SECRET = 'webhook-secret';
+    const order = {
+      _id: 'order-db-id',
+      orderNumber: 'VC20261121-12345678',
+      razorpayOrderId: 'order_123',
+      total: 12500,
+      status: 'pending_payment',
+      paymentStatus: 'created',
+      reservationExpiresAt: new Date(Date.now() + 600000),
+    };
+    let state = { ...order };
+    const paymentId = 'pay_123';
+    const message = `${order.razorpayOrderId}|${paymentId}`;
+    const signature = crypto.createHmac('sha256', 'test-secret').update(message).digest('hex');
+
+    global.fetch = async () => ({
+      ok: true,
+      json: async () => ({ id: paymentId, order_id: order.razorpayOrderId, status: 'captured', amount: 1250000, currency: 'INR' }),
+    });
+    Order.findOne = async () => order;
+    Order.findById = () => ({
+      select: async () => ({ ...state }),
+    });
+    Order.updateOne = async (_filter, update) => {
+      if (update.$set?.status === 'paid') state = { ...state, ...update.$set };
+      return { modifiedCount: update.$set?.status === 'paid' ? 1 : 0 };
+    };
+
+    let statusCode;
+    let body;
+    const res = {
+      status(code) { statusCode = code; return this; },
+      json(value) { body = value; return this; },
+    };
+    await controller.verifyPayment({
+      params: { orderNumber: order.orderNumber },
+      body: { razorpay_order_id: order.razorpayOrderId, razorpay_payment_id: paymentId, razorpay_signature: signature },
+    }, res, (error) => { throw error; });
+
+    assert.equal(statusCode, undefined);
+    assert.equal(body.status, 'paid');
+    assert.equal(body.paymentStatus, 'captured');
+    assert.equal(body.message, 'Payment confirmed');
+  } finally {
+    global.fetch = originalFetch;
+    Order.findOne = originalFindOne;
+    Order.findById = originalFindById;
+    Order.updateOne = originalUpdateOne;
+    for (const [key, value] of Object.entries({
+      PAYMENT_MODE: saved.mode,
+      RAZORPAY_KEY_ID: saved.keyId,
+      RAZORPAY_KEY_SECRET: saved.keySecret,
+      RAZORPAY_WEBHOOK_SECRET: saved.webhookSecret,
+    })) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+});
+
+test('verifyPayment amount mismatch does not mark the order paid', async () => {
+  const crypto = require('node:crypto');
+  const saved = { mode: process.env.PAYMENT_MODE, keyId: process.env.RAZORPAY_KEY_ID, keySecret: process.env.RAZORPAY_KEY_SECRET, webhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET };
+  const originalFetch = global.fetch;
+  const originalFindOne = Order.findOne;
+  const originalFindById = Order.findById;
+  const originalUpdateOne = Order.updateOne;
+  const originalRelease = service.releaseReservation;
+  try {
+    process.env.PAYMENT_MODE = 'test';
+    process.env.RAZORPAY_KEY_ID = 'rzp_test_example123';
+    process.env.RAZORPAY_KEY_SECRET = 'test-secret';
+    process.env.RAZORPAY_WEBHOOK_SECRET = 'webhook-secret';
+    const order = { _id: 'order-db-id', orderNumber: 'VC20261121-12345678', razorpayOrderId: 'order_123', total: 12500, status: 'pending_payment', paymentStatus: 'created', reservationExpiresAt: new Date(Date.now() + 600000) };
+    const paymentId = 'pay_123';
+    const signature = crypto.createHmac('sha256', 'test-secret').update(`${order.razorpayOrderId}|${paymentId}`).digest('hex');
+    let state = { ...order };
+    global.fetch = async () => ({ ok: true, json: async () => ({ id: paymentId, order_id: order.razorpayOrderId, status: 'captured', amount: 1, currency: 'INR' }) });
+    Order.findOne = async () => order;
+    Order.findById = () => ({ select: async () => ({ ...state }) });
+    Order.updateOne = async (_filter, update) => { if (update.$set?.status === 'refund_pending') state = { ...state, ...update.$set }; return { modifiedCount: 1 }; };
+    service.releaseReservation = async (_id, status) => { state.status = status; };
+
+    let body;
+    const res = { status() { return this; }, json(value) { body = value; return this; } };
+    await controller.verifyPayment({ params: { orderNumber: order.orderNumber }, body: { razorpay_order_id: order.razorpayOrderId, razorpay_payment_id: paymentId, razorpay_signature: signature } }, res, (error) => { throw error; });
+    assert.notEqual(body.status, 'paid');
+    assert.notEqual(body.paymentStatus, 'captured');
+  } finally {
+    global.fetch = originalFetch;
+    Order.findOne = originalFindOne;
+    Order.findById = originalFindById;
+    Order.updateOne = originalUpdateOne;
+    service.releaseReservation = originalRelease;
+    for (const [key, value] of Object.entries({ PAYMENT_MODE: saved.mode, RAZORPAY_KEY_ID: saved.keyId, RAZORPAY_KEY_SECRET: saved.keySecret, RAZORPAY_WEBHOOK_SECRET: saved.webhookSecret })) {
+      if (value === undefined) delete process.env[key]; else process.env[key] = value;
+    }
+  }
+});
+
+test('webhook after verify payment has no double capture effect', async () => {
+  const originalFindById = Order.findById;
+  const originalUpdateOne = Order.updateOne;
+  let state = { status: 'pending_payment', paymentStatus: 'created', reservationExpiresAt: new Date(Date.now() + 600000) };
+  let paidUpdates = 0;
+  try {
+    Order.findById = () => ({ select: async () => ({ ...state }) });
+    Order.updateOne = async (_filter, update) => {
+      if (update.$set?.status === 'paid') {
+        paidUpdates++;
+        state = { ...state, ...update.$set };
+        return { modifiedCount: 1 };
+      }
+      return { modifiedCount: 0 };
+    };
+    const order = { _id: 'order-db-id', total: 12500 };
+    assert.equal(await controller.applyCapturedPayment(order, 'pay_123', 1250000, 'INR', 'verify'), true);
+    assert.equal(await controller.applyCapturedPayment(order, 'pay_123', 1250000, 'INR', 'webhook'), true);
+    assert.equal(paidUpdates, 1);
+  } finally {
+    Order.findById = originalFindById;
+    Order.updateOne = originalUpdateOne;
+  }
+});
+
 test('payment.failed webhook keeps the reservation so the customer can retry in the same popup', async () => {
   const crypto = require('node:crypto');
   const WebhookEvent = require('../src/modules/orders/webhook-event.model');

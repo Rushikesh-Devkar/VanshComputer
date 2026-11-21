@@ -71,6 +71,31 @@ async function razorpayRequest(path, payload) {
   return data;
 }
 
+async function razorpayGet(path) {
+  let response;
+  try {
+    response = await fetch('https://api.razorpay.com/v1' + path, {
+      method: 'GET',
+      headers: {
+        Authorization: 'Basic ' + Buffer.from(`${process.env.RAZORPAY_KEY_ID}:${process.env.RAZORPAY_KEY_SECRET}`).toString('base64'),
+      },
+      signal: AbortSignal.timeout(10000),
+    });
+  } catch (_) {
+    const error = new Error('Payment provider response is uncertain. Keep the order number and contact support before retrying.');
+    error.status = 502;
+    error.uncertain = true;
+    throw error;
+  }
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error('Payment provider could not verify the payment. Please try again later.');
+    error.status = 502;
+    throw error;
+  }
+  return data;
+}
+
 exports.verifySignature = (message, signature, secret) => {
   const expected = crypto.createHmac('sha256', secret).update(message).digest('hex');
   const a = Buffer.from(expected, 'hex'), b = Buffer.from(signature || '', 'hex');
@@ -218,12 +243,46 @@ exports.verifyPayment = async (req, res, next) => {
     if (!exports.verifySignature(`${order.razorpayOrderId}|${input.razorpay_payment_id}`, input.razorpay_signature, process.env.RAZORPAY_KEY_SECRET)) {
       return res.status(400).json({ message: 'Payment signature could not be verified.' });
     }
-    await Order.updateOne({ _id: order._id, status: 'pending_payment', reservationExpiresAt: { $gt: new Date() } }, {
-      $set: { razorpayPaymentId: input.razorpay_payment_id, paymentStatus: 'authorized' },
-      $push: { statusHistory: { action: 'payment_signature_verified', detail: 'Awaiting verified payment webhook.' } },
-    });
+
+    let markedPaid = false;
+    try {
+      const payment = await razorpayGet(`/payments/${encodeURIComponent(input.razorpay_payment_id)}`);
+      const belongsToOrder = payment.order_id === order.razorpayOrderId;
+      if (belongsToOrder && payment.status === 'captured') {
+        markedPaid = await applyCapturedPayment(
+          order,
+          input.razorpay_payment_id,
+          payment.amount,
+          payment.currency,
+          'verify'
+        );
+      } else if (belongsToOrder && payment.status === 'authorized') {
+        console.warn('RAZORPAY_AUTO_CAPTURE_OFF', { orderNumber: order.orderNumber, paymentId: input.razorpay_payment_id });
+        await Order.updateOne({ _id: order._id, status: 'pending_payment', reservationExpiresAt: { $gt: new Date() } }, {
+          $set: { razorpayPaymentId: input.razorpay_payment_id, paymentStatus: 'authorized' },
+          $push: { statusHistory: { action: 'payment_signature_verified', detail: 'Razorpay payment is authorized; auto-capture may be disabled.', at: new Date() } },
+        });
+      } else if (!belongsToOrder) {
+        await Order.updateOne({ _id: order._id, status: 'pending_payment', reservationExpiresAt: { $gt: new Date() } }, {
+          $set: { razorpayPaymentId: input.razorpay_payment_id, paymentStatus: 'authorized' },
+          $push: { statusHistory: { action: 'payment_signature_verified', detail: 'Awaiting verification of payment provider status.', at: new Date() } },
+        });
+      }
+    } catch (error) {
+      console.warn('RAZORPAY_PAYMENT_LOOKUP_FAILED', { orderNumber: order.orderNumber, paymentId: input.razorpay_payment_id });
+      await Order.updateOne({ _id: order._id, status: 'pending_payment', reservationExpiresAt: { $gt: new Date() } }, {
+        $set: { razorpayPaymentId: input.razorpay_payment_id, paymentStatus: 'authorized' },
+        $push: { statusHistory: { action: 'payment_signature_verified', detail: 'Awaiting verified payment webhook.' } },
+      });
+    }
     const current = await Order.findById(order._id).select('orderNumber status paymentStatus');
-    res.json({ orderNumber: current.orderNumber, status: current.status, paymentStatus: current.paymentStatus, message: 'Payment response verified. Final confirmation follows the payment provider webhook.' });
+    markedPaid = markedPaid && current.status === 'paid';
+    res.json({
+      orderNumber: current.orderNumber,
+      status: current.status,
+      paymentStatus: current.paymentStatus,
+      message: markedPaid ? 'Payment confirmed' : 'Payment response verified. Final confirmation follows the payment provider webhook.',
+    });
   } catch (error) { next(error); }
 };
 
@@ -239,6 +298,47 @@ async function flagCaptureForRefund(order, paymentId, action, detail) {
     $push: { statusHistory: { action, detail, at: new Date() } },
   });
 }
+
+async function applyCapturedPayment(order, paymentId, amountPaise, currency, source) {
+  const current = await Order.findById(order._id).select('status paymentStatus reservationExpiresAt razorpayPaymentId');
+  if (current && current.status === 'paid' && current.paymentStatus === 'captured') return true;
+
+  const amountMatches =
+    Number(amountPaise) === Math.round(order.total * 100) &&
+    currency === 'INR';
+
+  if (!amountMatches) {
+    if (current && current.status === 'pending_payment') {
+      await service.releaseReservation(order._id, 'expired');
+      await Order.updateOne({ _id: order._id, status: 'expired' }, {
+        $set: { status: 'refund_pending', paymentStatus: 'refund_pending', ...(paymentId ? { razorpayPaymentId: paymentId } : {}) },
+        $push: { statusHistory: { action: 'payment_amount_review', detail: 'Captured amount or currency does not match order; refund review required.', at: new Date() } },
+      });
+    } else if (current && ['expired', 'payment_failed', 'cancelled'].includes(current.status)) {
+      await Order.updateOne({ _id: order._id, status: current.status }, {
+        $set: { status: 'refund_pending', paymentStatus: 'refund_pending', ...(paymentId ? { razorpayPaymentId: paymentId } : {}) },
+        $push: { statusHistory: { action: 'payment_amount_review', detail: 'Captured amount or currency does not match order; refund review required.', at: new Date() } },
+      });
+    }
+    return false;
+  }
+
+  if (current && current.status === 'pending_payment' && current.reservationExpiresAt > new Date()) {
+    const paid = await Order.updateOne({ _id: order._id, status: 'pending_payment', reservationExpiresAt: { $gt: new Date() } }, {
+      $set: { status: 'paid', paymentStatus: 'captured', ...(paymentId ? { razorpayPaymentId: paymentId } : {}) },
+      $push: { statusHistory: { action: 'payment_captured', detail: `Verified Razorpay ${source === 'verify' ? 'payment verification' : 'webhook'}.`, at: new Date() } },
+    });
+    if (paid.modifiedCount) return true;
+  }
+
+  if (current && ['pending_payment', 'expired', 'payment_failed', 'cancelled'].includes(current.status)) {
+    await flagCaptureForRefund(order, paymentId, 'late_payment_capture',
+      `Captured after reservation ended via ${source}; refund review required.`);
+  }
+  return false;
+}
+
+exports.applyCapturedPayment = applyCapturedPayment;
 
 exports.webhook = async (req, res, next) => {
   let claimedEventId = null;
@@ -276,22 +376,7 @@ exports.webhook = async (req, res, next) => {
       const orderEntity = event.payload && event.payload.order && event.payload.order.entity;
       const capturedAmount = entity && entity.amount || orderEntity && (orderEntity.amount_paid || orderEntity.amount);
       const capturedCurrency = entity && entity.currency || orderEntity && orderEntity.currency;
-      const amountMatches = Number(capturedAmount) === Math.round(order.total * 100) && capturedCurrency === 'INR';
-      if (!amountMatches && ['pending_payment', 'expired', 'payment_failed', 'cancelled'].includes(order.status)) {
-        if (order.status === 'pending_payment') await service.releaseReservation(order._id, 'expired');
-        await Order.updateOne({ _id: order._id, status: { $in: ['expired', 'payment_failed', 'cancelled'] } }, {
-          $set: { status: 'refund_pending', paymentStatus: 'refund_pending', ...(paymentId ? { razorpayPaymentId: paymentId } : {}) },
-          $push: { statusHistory: { action: 'payment_amount_review', detail: 'Captured amount or currency does not match order; refund review required.', at: new Date() } },
-        });
-      } else if (order.status === 'pending_payment' && amountMatches && order.reservationExpiresAt > new Date()) {
-        const paid = await Order.updateOne({ _id: order._id, status: 'pending_payment', reservationExpiresAt: { $gt: new Date() } }, {
-          $set: { status: 'paid', paymentStatus: 'captured', ...(paymentId ? { razorpayPaymentId: paymentId } : {}) },
-          $push: { statusHistory: { action: 'payment_captured', detail: 'Verified Razorpay webhook.', at: new Date() } },
-        });
-        if (!paid.modifiedCount) await flagCaptureForRefund(order, paymentId, 'late_payment_capture', 'Payment captured after reservation expired; refund review required.');
-      } else if (['pending_payment', 'expired', 'payment_failed', 'cancelled'].includes(order.status)) {
-        await flagCaptureForRefund(order, paymentId, 'late_payment_capture', 'Captured after reservation ended; refund review required.');
-      }
+      await applyCapturedPayment(order, paymentId, capturedAmount, capturedCurrency, 'webhook');
     } else if (order && eventName === 'payment.failed') {
       // Customer isi popup mein dobara try kar sakta hai. Isliye stock abhi release nahi karte.
       await Order.updateOne({ _id: order._id, status: 'pending_payment' }, {
