@@ -1,4 +1,5 @@
 const mailer = require('./mailer');
+const { baseUrl } = require('../config/env');
 
 let missingOwnerAlertWarningLogged = false;
 
@@ -13,7 +14,7 @@ function escapeHtml(value) {
 }
 
 function appAdminUrl() {
-  return `${String(process.env.APP_BASE_URL || '').replace(/\/+$/, '')}/admin.html`;
+  return `${baseUrl()}/admin.html`;
 }
 
 function notifyOwner({ subject, text, html }) {

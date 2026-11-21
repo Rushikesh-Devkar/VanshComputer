@@ -1,8 +1,9 @@
 const mailer = require('./mailer');
 const { escapeHtml } = require('./ownerAlerts');
+const { baseUrl } = require('../config/env');
 
 function appUrl(path) {
-  return `${String(process.env.APP_BASE_URL || 'http://localhost:4000').replace(/\/+$/, '')}${path}`;
+  return `${baseUrl()}${path}`;
 }
 
 function sendCustomerMail(order, { subject, text, html }) {
