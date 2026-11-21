@@ -1,10 +1,17 @@
 const app = require('./app');
-const { isProd } = require('./config/env');
+const { isProd, validateProductionEnvironment } = require('./config/env');
 const connectDB = require('./config/db');
 const { expireReservations } = require('./modules/orders/order.service');
 const mailer = require('./utils/mailer');
 
 const PORT = process.env.PORT || 4000;
+
+const startupErrors = validateProductionEnvironment();
+if (startupErrors.length) {
+  console.error('Production configuration error:');
+  for (const error of startupErrors) console.error(`- ${error}`);
+  process.exit(1);
+}
 
 
 if (isProd() && !mailer.isMailConfigured()) {

@@ -25,7 +25,7 @@ app.use(helmet({
 const origins = (process.env.CLIENT_ORIGIN || 'http://localhost:5173')
   .split(',').map(o => o.trim()).filter(Boolean);
 app.use(cors({ origin: origins, credentials: true }));
-app.use(express.static(frontendDir));
+app.use(express.static(frontendDir, { dotfiles: 'deny' }));
 app.get('/', (req, res) => res.sendFile(path.join(frontendDir, 'index.html')));
 
 // Razorpay signs the original bytes, so this route must run before JSON parsing.
