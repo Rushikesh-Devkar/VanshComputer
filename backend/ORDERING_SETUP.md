@@ -19,21 +19,6 @@
 
 The cart quote and final order both use current MongoDB prices and server-side shipping settings. The final order reserves stock inside a transaction. A background worker and payment endpoints release unpaid reservations after the configured period. Customer tracking and return requests require the signed-in customer account that owns the order. Admin order and shipping writes require owner/manager authentication.
 
-### Render environment variables
-
-Set these variables on the Render service:
-
-- `NODE_ENV=production`
-- `APP_BASE_URL=https://<your-public-domain>` (required; HTTPS only; never `localhost` or `127.0.0.1`)
-- `CLIENT_ORIGIN=https://<your-public-frontend-origin>` (or a comma-separated HTTPS origin list)
-- `JWT_SECRET=<random-secret-at-least-32-characters>`
-- `MONGO_URI=<MongoDB replica-set connection string>`
-- `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
-- `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`
-- `PAYMENT_MODE=live`
-- Mail delivery: `MAIL_FROM` plus SMTP variables or `BREVO_API_KEY`; set `OWNER_ALERT_EMAIL` for owner alerts
-
-The production process exits before database startup when `APP_BASE_URL` is missing or is not a public HTTPS URL. `CLIENT_ORIGIN` is a production warning check rather than a startup-blocking validation.
 
 ## Customer accounts, tracking, and returns
 

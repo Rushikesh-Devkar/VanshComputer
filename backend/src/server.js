@@ -1,13 +1,11 @@
 const app = require('./app');
-const { isProd, validateEnvironment } = require('./config/env');
+const { isProd } = require('./config/env');
 const connectDB = require('./config/db');
 const { expireReservations } = require('./modules/orders/order.service');
 const mailer = require('./utils/mailer');
 
 const PORT = process.env.PORT || 4000;
 
-const startupEnvironment = validateEnvironment({ exitProcess: true });
-if (!startupEnvironment.valid) process.exit(1);
 
 if (isProd() && !mailer.isMailConfigured()) {
   mailer.warnMailNotConfigured();

@@ -6,7 +6,6 @@ const crypto = require('crypto');
 const mailer = require('../../utils/mailer');
 const { escapeHtml } = require('../../utils/ownerAlerts');
 const { isProd } = require('../../config/env');
-const { baseUrl } = require('../../config/env');
 const DUMMY_HASH = bcrypt.hashSync('dummy-password', 12);
 const emailResetAttempts = new Map();
 const RESET_RESPONSE = 'If an account exists for that email, we have sent a reset link. Check your inbox and spam folder.';
@@ -78,7 +77,8 @@ async function processForgotPassword(email) {
     user.resetTokenHash = crypto.createHash('sha256').update(token).digest('hex');
     user.resetTokenExpires = new Date(Date.now() + 30 * 60 * 1000);
     await user.save();
-    const link = `${baseUrl()}/reset-password.html?token=${token}`;
+    const baseUrl = String(process.env.APP_BASE_URL || 'http://localhost:4000').trim().replace(/\/+$/, '');
+    const link = `${baseUrl}/reset-password.html?token=${token}`;
     if (mailer.isMailConfigured()) {
       const safeName = escapeHtml(user.name || '');
       const safeLink = escapeHtml(link);
