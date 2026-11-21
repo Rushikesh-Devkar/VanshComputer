@@ -9,6 +9,16 @@ const STORE = {
   mapsUrl: 'https://maps.app.goo.gl/LvvZbApBRxbzKYFV8?g_st=ic',
 };
 const rupee = (n) => '₹ ' + Number(n).toLocaleString('en-IN');
+const COURIER_OPTIONS = [
+  'Delhivery',
+  'DTDC',
+  'India Post',
+  'Blue Dart',
+  'ST Courier',
+  'Professional Couriers',
+  'Local delivery (own person)',
+  'Other',
+];
 const ORDER_STATUS_LABELS = {
   pending_payment: 'Awaiting payment',
   paid: 'Payment confirmed',

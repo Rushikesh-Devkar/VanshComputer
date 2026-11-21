@@ -91,6 +91,10 @@ function render(order){
     h('section',{class:'flow-card'},h('h3',{},'Payment summary'),
       ...[['Subtotal',order.subtotal],['Discount',-order.discount],['Delivery',order.shippingCharge],['Total',order.total],['Payment status',String(order.paymentStatus).replaceAll('_',' ')],['Payment ID',order.paymentId||'Not captured']].map(([k,v])=>h('div',{class:'summary-row'},h('span',{},k),h('b',{},typeof v==='number'?money(v):v))),
       h('p',{},order.courierName?'Courier: '+order.courierName:'Courier details appear after dispatch',order.trackingNumber?' · AWB: '+order.trackingNumber:'')));
+  if(order.trackingUrl){
+    aside.querySelectorAll('.courier-track-link').forEach(element=>element.remove());
+    aside.append(h('a',{class:'checkout-btn full courier-track-link',href:order.trackingUrl,target:'_blank',rel:'noopener noreferrer'},'Track on courier site'));
+  }
   if(['shipped','out_for_delivery'].includes(order.status)&&order.deliveryOtp){
     aside.append(h('section',{class:'flow-card'},
       h('h3',{},'Delivery OTP'),

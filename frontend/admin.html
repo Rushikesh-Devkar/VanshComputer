@@ -289,10 +289,29 @@ async function loadOrders() {
         button('Request full refund', async () => { if (!confirm(`Request a full verified-provider refund for ${order.orderNumber}?`)) return; await request('/api/orders/admin/' + encodeURIComponent(order._id) + '/refund', { method: 'POST' }); await loadOrders(); });
       }
       if (order.status === 'processing') {
-        const courier = document.createElement('input'); courier.placeholder = 'Courier company'; courier.maxLength = 100; courier.value = order.courierName || '';
+        const courier = document.createElement('select');
+        ['Delhivery','DTDC','India Post','Blue Dart','ST Courier','Professional Couriers','Local delivery (own person)','Other'].forEach((name) => {
+          const option = document.createElement('option');
+          option.value = name;
+          option.textContent = name;
+          option.selected = order.courierName === name;
+          courier.append(option);
+        });
+        if (!COURIER_OPTIONS.includes(order.courierName)) {
+          courier.value = 'Other';
+        }
         const trackingNo = document.createElement('input'); trackingNo.placeholder = 'Tracking number'; trackingNo.maxLength = 100; trackingNo.value = order.trackingNumber || '';
-        actions.append(courier, trackingNo);
-        button('Mark shipped', () => update('shipped', { courierName: courier.value.trim(), trackingNumber: trackingNo.value.trim() }));
+        const otherTemplate = document.createElement('input');
+        otherTemplate.placeholder = 'https://courier.example/track/{awb}';
+        otherTemplate.maxLength = 300;
+        otherTemplate.hidden = courier.value !== 'Other';
+        courier.addEventListener('change', () => { otherTemplate.hidden = courier.value !== 'Other'; });
+        actions.append(courier, trackingNo, otherTemplate);
+        button('Mark shipped', () => update('shipped', {
+          courierName: courier.value.trim(),
+          trackingNumber: trackingNo.value.trim(),
+          trackingUrlTemplate: courier.value === 'Other' ? otherTemplate.value.trim() : '',
+        }));
         button('Request full refund', async () => { if (!confirm(`Request a full verified-provider refund for ${order.orderNumber}?`)) return; await request('/api/orders/admin/' + encodeURIComponent(order._id) + '/refund', { method: 'POST' }); await loadOrders(); });
       }
       if (order.status === 'shipped') {

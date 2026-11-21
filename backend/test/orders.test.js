@@ -7,6 +7,7 @@ const Order = require('../src/modules/orders/order.model');
 const { itemsSchema, addressSchema, trackingSchema } = require('../src/modules/orders/schemas');
 const service = require('../src/modules/orders/order.service');
 const controller = require('../src/modules/orders/order.controller');
+const { buildTrackingUrl, validateHttpsUrl } = require('../src/modules/orders/tracking');
 
 const validAddress = { line1: '12 Market Road', line2: '', city: 'Pimpri', district: 'Pune', state: 'Maharashtra', pinCode: '411018' };
 const productId = '64b000000000000000000001';
@@ -16,6 +17,15 @@ function mockQuoteData(product, settings) {
   Product.find = () => ({ select() { return this; }, session() { return this; }, lean: async () => [product] });
   ShippingSettings.findById = () => ({ session() { return this; }, lean: async () => settings });
 }
+
+test('courier tracking URLs are HTTPS and never accept javascript URLs', () => {
+  assert.equal(buildTrackingUrl('Delhivery', 'AWB123'), 'https://www.delhivery.com/track/package/AWB123');
+  assert.equal(buildTrackingUrl('Local delivery (own person)', 'AWB123'), '');
+  assert.equal(buildTrackingUrl('Other', 'AWB123', 'https://courier.example/track/{awb}'), 'https://courier.example/track/AWB123');
+  assert.equal(validateHttpsUrl('javascript:alert(1)'), false);
+  assert.equal(validateHttpsUrl('http://courier.example/track/{awb}'), false);
+  assert.equal(validateHttpsUrl('https://courier.example/track/{awb}'), true);
+});
 
 test('checkout item schema rejects client supplied prices and duplicate products', () => {
   assert.throws(() => itemsSchema.parse([{ productId, quantity: 1, price: 1 }]));

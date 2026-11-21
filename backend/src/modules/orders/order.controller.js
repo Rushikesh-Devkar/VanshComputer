@@ -10,6 +10,7 @@ const { normalizeIndianPhone } = require('../../utils/phone');
 const { escapeHtml, appAdminUrl, notifyOwner } = require('../../utils/ownerAlerts');
 const orderMails = require('../../utils/orderMails');
 const { sendSms } = require('../../utils/sms');
+const { buildTrackingUrl, validateHttpsUrl } = require('./tracking');
 
 const reservationMinutes = () => Math.min(60, Math.max(5, Number(process.env.PAYMENT_RESERVATION_MINUTES) || 15));
 const deliveryOtpHash = (orderNumber, otp) =>
@@ -230,7 +231,7 @@ exports.accountOrders = async (req, res, next) => {
       filter.$or = [{ status: { $ne: 'pending_payment' } }, { reservationExpiresAt: { $gt: new Date() } }];
     }
     const orders = await Order.find(filter)
-      .select('orderNumber status paymentStatus total currency createdAt updatedAt courierName trackingNumber deliveredAt items.name items.imageUrl items.quantity')
+      .select('orderNumber status paymentStatus total currency createdAt updatedAt courierName trackingNumber trackingUrl deliveredAt items.name items.imageUrl items.quantity')
       .sort({ createdAt: -1 }).limit(50).lean();
     res.json({ items: orders });
   } catch (error) { next(error); }
@@ -239,7 +240,7 @@ exports.accountOrders = async (req, res, next) => {
 exports.mineDetail = async (req, res, next) => {
   try {
     const order = await Order.findOne({ orderNumber: String(req.params.orderNumber).trim().toUpperCase(), customerAccount: req.user._id })
-      .select('+deliveryOtpEncrypted orderNumber items address subtotal discount shippingCharge total currency status paymentStatus razorpayPaymentId courierName trackingNumber deliveredAt createdAt statusHistory deliveryOtpExpiresAt')
+      .select('+deliveryOtpEncrypted orderNumber items address subtotal discount shippingCharge total currency status paymentStatus razorpayPaymentId courierName trackingNumber trackingUrl deliveredAt createdAt statusHistory deliveryOtpExpiresAt')
       .lean();
     if (!order) return res.status(404).json({ message: 'Order details could not be verified.' });
     const items = (order.items || []).map(({ name, imageUrl, quantity, unitPrice, originalPrice, lineTotal, warrantyMonths, type }) =>
@@ -250,7 +251,7 @@ exports.mineDetail = async (req, res, next) => {
     }
     res.json({ orderNumber: order.orderNumber, items, address: order.address, subtotal: order.subtotal, discount: order.discount,
       shippingCharge: order.shippingCharge, total: order.total, currency: order.currency, status: order.status, paymentStatus: order.paymentStatus,
-      ...(order.paymentStatus === 'captured' ? { paymentId: order.razorpayPaymentId } : {}), courierName: order.courierName, trackingNumber: order.trackingNumber,
+      ...(order.paymentStatus === 'captured' ? { paymentId: order.razorpayPaymentId } : {}), courierName: order.courierName, trackingNumber: order.trackingNumber, trackingUrl: order.trackingUrl || '',
       deliveredAt: order.deliveredAt, createdAt: order.createdAt,
       ...(deliveryOtp ? { deliveryOtp } : {}),
       statusHistory: (order.statusHistory || []).map(({ action, at }) => ({ action, at })) });
@@ -528,13 +529,13 @@ exports.track = async (req, res, next) => {
     const input = trackingSchema.parse(req.body);
     const filter = { customerAccount: req.user._id };
     if (input.orderNumber) filter.orderNumber = input.orderNumber.toUpperCase();
-    let query = Order.findOne(filter).select('orderNumber status paymentStatus items total shippingCharge address statusHistory trackingNumber courierName deliveredAt createdAt updatedAt');
+    let query = Order.findOne(filter).select('orderNumber status paymentStatus items total shippingCharge address statusHistory trackingNumber trackingUrl courierName deliveredAt createdAt updatedAt');
     if (!input.orderNumber) query = query.sort({ createdAt: -1 });
     const order = await query;
     if (!order) return res.status(404).json({ message: 'Order details could not be verified.' });
     res.json({ orderNumber: order.orderNumber, status: order.status, paymentStatus: order.paymentStatus,
       items: order.items, total: order.total, shippingCharge: order.shippingCharge,
-      trackingNumber: order.trackingNumber, courierName: order.courierName,
+      trackingNumber: order.trackingNumber, trackingUrl: order.trackingUrl || '', courierName: order.courierName,
       deliveredAt: order.deliveredAt, createdAt: order.createdAt, updatedAt: order.updatedAt, address: order.address,
       statusHistory: (order.statusHistory || []).map(({ action, at }) => ({ action, at })) });
   } catch (error) { next(error); }
@@ -561,6 +562,8 @@ exports.adminUpdate = async (req, res, next) => {
       status: z.enum(['processing', 'shipped', 'out_for_delivery', 'delivered', 'cancelled']),
       courierName: z.string().trim().max(100).optional(),
       trackingNumber: z.string().trim().max(100).optional(),
+      trackingUrlTemplate: z.string().trim().max(300).optional()
+        .refine((value) => !value || (validateHttpsUrl(value) && value.includes('{awb}')), 'Tracking URL template must be HTTPS and contain {awb}'),
       otp: z.string().regex(/^\d{6}$/).optional(),
       override: z.boolean().optional(),
       reason: z.string().trim().min(1).max(500).optional(),
@@ -618,6 +621,11 @@ exports.adminUpdate = async (req, res, next) => {
     if (input.status === 'delivered') update.deliveredAt = order.deliveredAt || new Date();
     if (input.courierName != null) update.courierName = input.courierName;
     if (input.trackingNumber != null) update.trackingNumber = input.trackingNumber;
+    if (input.status === 'shipped' || (input.courierName != null && input.trackingNumber != null)) {
+      const courierName = input.courierName != null ? input.courierName : order.courierName;
+      const trackingNumber = input.trackingNumber != null ? input.trackingNumber : order.trackingNumber;
+      update.trackingUrl = buildTrackingUrl(courierName, trackingNumber, input.trackingUrlTemplate);
+    }
     if (input.status === 'shipped') {
       update.deliveryOtpHash = deliveryOtpHash(order.orderNumber, generatedOtp);
       update.deliveryOtpEncrypted = encryptDeliveryOtp(generatedOtp);
