@@ -1,6 +1,7 @@
 const Lead = require('./lead.model');
 const { normalizeIndianPhone } = require('../../utils/phone');
 const v = require('../../utils/validate');
+const { escapeHtml, appAdminUrl, notifyOwner } = require('../../utils/ownerAlerts');
 
 exports.create = async (req, res, next) => {
   try {
@@ -15,6 +16,14 @@ exports.create = async (req, res, next) => {
       ...body,
       phone,
       consent: { ...body.consent, capturedAt: new Date() },
+    });
+    const adminUrl = appAdminUrl();
+    const name = lead.name || '';
+    const productName = lead.productSnapshot?.name || '';
+    notifyOwner({
+      subject: `New lead: ${lead.enquiryType || 'callback'}`,
+      text: `New lead\nName: ${name}\nPhone: ${lead.phone}\nEnquiry: ${lead.enquiryType || 'callback'}\nPreferred contact: ${lead.preferredContact || 'either'}\nProduct: ${productName}\nAdmin: ${adminUrl}`,
+      html: `<p><strong>New lead</strong></p><p>Name: ${escapeHtml(name)}<br>Phone: ${escapeHtml(lead.phone)}<br>Enquiry: ${escapeHtml(lead.enquiryType || 'callback')}<br>Preferred contact: ${escapeHtml(lead.preferredContact || 'either')}<br>Product: ${escapeHtml(productName)}</p><p><a href="${escapeHtml(adminUrl)}">Open admin</a></p>`,
     });
 
     res.status(201).json(lead);

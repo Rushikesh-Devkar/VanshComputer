@@ -9,6 +9,7 @@
 ## Configure and start
 
 1. From `backend`, copy `.env.example` to `.env` and set `MONGO_URI`, `JWT_SECRET`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, and `RAZORPAY_WEBHOOK_SECRET`. Configure email with `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE` (`true` or `false`), `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM`, and `APP_BASE_URL`. `APP_BASE_URL` must be the public site origin in production and is never taken from the incoming request. Optional owner alerts use `OWNER_ALERT_EMAIL`. Keep `.env` local and restart the backend after changing it.
+   Owner alerts are sent asynchronously for newly paid orders, new return requests, new leads, and refund review/failure events. Set `OWNER_ALERT_EMAIL` to the owner's receiving address and ensure SMTP or Brevo plus `MAIL_FROM` and `APP_BASE_URL` are configured. Missing alert configuration skips delivery with one warning and never blocks checkout or admin requests.
 2. Set `PAYMENT_MODE=test` for testing or `PAYMENT_MODE=live` for production. `PAYMENT_RESERVATION_MINUTES` is optional and defaults to 15 (allowed range: 5–60).
 3. Install dependencies and run checks: `npm install`, then `npm test`.
 4. Start the app with `npm run dev`.

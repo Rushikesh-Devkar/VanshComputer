@@ -6,6 +6,7 @@ const WebhookEvent = require('./webhook-event.model');
 const { itemsSchema, addressSchema, quoteAddressSchema, customerSchema, trackingSchema, policyConsentSchema } = require('./schemas');
 const service = require('./order.service');
 const { normalizeIndianPhone } = require('../../utils/phone');
+const { escapeHtml, appAdminUrl, notifyOwner } = require('../../utils/ownerAlerts');
 
 const reservationMinutes = () => Math.min(60, Math.max(5, Number(process.env.PAYMENT_RESERVATION_MINUTES) || 15));
 // .env / Render mein copy-paste se aksar extra space ya capital letter aa jata hai (jaise "Live " ya key ke aage space).
@@ -293,9 +294,69 @@ async function flagCaptureForRefund(order, paymentId, action, detail) {
     current = await Order.findById(order._id).select('status');
   }
   if (!current || !['expired', 'payment_failed', 'cancelled'].includes(current.status)) return;
-  await Order.updateOne({ _id: order._id, status: current.status }, {
+  const updated = await Order.updateOne({ _id: order._id, status: current.status }, {
     $set: { status: 'refund_pending', paymentStatus: 'refund_pending', ...(paymentId ? { razorpayPaymentId: paymentId } : {}) },
     $push: { statusHistory: { action, detail, at: new Date() } },
+  });
+  if (updated.modifiedCount) {
+    notifyOwner({
+      subject: `Late or review payment for ${order.orderNumber || ''}`,
+      text: `Order ${order.orderNumber || ''} needs refund review. ${detail}\nAdmin: ${appAdminUrl()}`,
+      html: `<p>Order <strong>${escapeHtml(order.orderNumber || '')}</strong> needs refund review.</p><p>${escapeHtml(detail)}</p><p><a href="${escapeHtml(appAdminUrl())}">Open admin</a></p>`,
+    });
+  }
+}
+
+function notifyPaidOrder(order) {
+  const items = (order.items || []).map((item) =>
+    `${item.name || 'Item'} × ${Number(item.quantity || 0)}`
+  );
+  const address = order.address || {};
+  const fullAddress = [
+    address.line1,
+    address.line2,
+    address.city,
+    address.district,
+    address.state,
+    address.pinCode,
+  ].filter(Boolean).join(', ');
+  const orderNumber = order.orderNumber || '';
+  const customerName = order.customer?.name || '';
+  const customerPhone = order.customer?.phone || '';
+  const total = `₹${Number(order.total || 0).toLocaleString('en-IN')}`;
+  const adminUrl = appAdminUrl();
+  const textLines = [
+    `New paid order: ${orderNumber}`,
+    `Items: ${items.join(', ') || 'None'}`,
+    `Total: ${total}`,
+    `Customer: ${customerName}`,
+    `Phone: ${customerPhone}`,
+    `Address: ${fullAddress || 'Not provided'}`,
+    `Admin: ${adminUrl}`,
+  ];
+  const htmlLines = [
+    `<p><strong>New paid order:</strong> ${escapeHtml(orderNumber)}</p>`,
+    `<p><strong>Items:</strong><br>${items.map((item) => escapeHtml(item)).join('<br>')}</p>`,
+    `<p><strong>Total:</strong> ${escapeHtml(total)}</p>`,
+    `<p><strong>Customer:</strong> ${escapeHtml(customerName)}</p>`,
+    `<p><strong>Phone:</strong> ${escapeHtml(customerPhone)}</p>`,
+    `<p><strong>Address:</strong> ${escapeHtml(fullAddress || 'Not provided')}</p>`,
+    `<p><a href="${escapeHtml(adminUrl)}">Open admin</a></p>`,
+  ];
+  notifyOwner({
+    subject: `New paid order ${orderNumber}`,
+    text: textLines.join('\n'),
+    html: htmlLines.join(''),
+  });
+}
+
+function notifyRefundReview(order, paymentId, detail) {
+  const orderNumber = order.orderNumber || '';
+  const adminUrl = appAdminUrl();
+  notifyOwner({
+    subject: `Refund review: ${orderNumber}`,
+    text: `Order ${orderNumber} requires refund review. ${detail}${paymentId ? ` Payment: ${paymentId}` : ''}\nAdmin: ${adminUrl}`,
+    html: `<p>Order <strong>${escapeHtml(orderNumber)}</strong> requires refund review.</p><p>${escapeHtml(detail)}</p>${paymentId ? `<p>Payment: ${escapeHtml(paymentId)}</p>` : ''}<p><a href="${escapeHtml(adminUrl)}">Open admin</a></p>`,
   });
 }
 
@@ -310,15 +371,17 @@ async function applyCapturedPayment(order, paymentId, amountPaise, currency, sou
   if (!amountMatches) {
     if (current && current.status === 'pending_payment') {
       await service.releaseReservation(order._id, 'expired');
-      await Order.updateOne({ _id: order._id, status: 'expired' }, {
+      const mismatch = await Order.updateOne({ _id: order._id, status: 'expired' }, {
         $set: { status: 'refund_pending', paymentStatus: 'refund_pending', ...(paymentId ? { razorpayPaymentId: paymentId } : {}) },
         $push: { statusHistory: { action: 'payment_amount_review', detail: 'Captured amount or currency does not match order; refund review required.', at: new Date() } },
       });
+      if (mismatch.modifiedCount) notifyRefundReview(order, paymentId, 'Captured amount or currency does not match the order.');
     } else if (current && ['expired', 'payment_failed', 'cancelled'].includes(current.status)) {
-      await Order.updateOne({ _id: order._id, status: current.status }, {
+      const mismatch = await Order.updateOne({ _id: order._id, status: current.status }, {
         $set: { status: 'refund_pending', paymentStatus: 'refund_pending', ...(paymentId ? { razorpayPaymentId: paymentId } : {}) },
         $push: { statusHistory: { action: 'payment_amount_review', detail: 'Captured amount or currency does not match order; refund review required.', at: new Date() } },
       });
+      if (mismatch.modifiedCount) notifyRefundReview(order, paymentId, 'Captured amount or currency does not match the order.');
     }
     return false;
   }
@@ -328,7 +391,10 @@ async function applyCapturedPayment(order, paymentId, amountPaise, currency, sou
       $set: { status: 'paid', paymentStatus: 'captured', ...(paymentId ? { razorpayPaymentId: paymentId } : {}) },
       $push: { statusHistory: { action: 'payment_captured', detail: `Verified Razorpay ${source === 'verify' ? 'payment verification' : 'webhook'}.`, at: new Date() } },
     });
-    if (paid.modifiedCount) return true;
+    if (paid.modifiedCount) {
+      notifyPaidOrder(order);
+      return true;
+    }
   }
 
   if (current && ['pending_payment', 'expired', 'payment_failed', 'cancelled'].includes(current.status)) {
@@ -386,13 +452,21 @@ exports.webhook = async (req, res, next) => {
       const expectedRefund = order.refundExpectedAmount == null ? order.total : order.refundExpectedAmount;
       const refundMatches = refundEntity && Number(refundEntity.amount) === Math.round(expectedRefund * 100) && refundEntity.currency === 'INR';
       const fullAmount = refundMatches && expectedRefund === order.total;
-      await Order.updateOne({ _id: order._id, status: 'refund_pending' }, {
+      const refundUpdate = await Order.updateOne({ _id: order._id, status: 'refund_pending' }, {
         $set: { status: refundMatches ? (fullAmount ? 'refunded' : 'partially_refunded') : 'refund_review', paymentStatus: refundMatches ? (fullAmount ? 'refunded' : 'partially_refunded') : 'refund_review', razorpayRefundId: refundEntity && refundEntity.id || '' },
         $push: { statusHistory: { action: refundMatches ? 'refund_processed' : 'refund_amount_review', detail: refundMatches ? 'Verified refund webhook amount.' : 'Refund amount or currency did not match the requested amount.', at: new Date() } },
       });
+      if (refundUpdate.modifiedCount && !refundMatches) notifyRefundReview(order, paymentId, 'Refund amount or currency did not match the requested amount.');
       if (refundMatches) await ReturnRequest.updateOne({ order: order._id, status: 'refund_pending' }, { $set: { status: 'refunded' }, $push: { statusHistory: { action: 'refunded', detail: 'Refund webhook verified.' } } });
     } else if (order && eventName === 'refund.failed') {
-      await Order.updateOne({ _id: order._id, status: 'refund_pending' }, { $set: { status: 'refund_failed', paymentStatus: 'refund_failed', razorpayRefundId: refundEntity && refundEntity.id || '' }, $push: { statusHistory: { action: 'refund_failed', detail: 'Payment provider reported refund failure.', at: new Date() } } });
+      const refundFailed = await Order.updateOne({ _id: order._id, status: 'refund_pending' }, { $set: { status: 'refund_failed', paymentStatus: 'refund_failed', razorpayRefundId: refundEntity && refundEntity.id || '' }, $push: { statusHistory: { action: 'refund_failed', detail: 'Payment provider reported refund failure.', at: new Date() } } });
+      if (refundFailed.modifiedCount) {
+        notifyOwner({
+          subject: `Refund failed: ${order.orderNumber || ''}`,
+          text: `Order ${order.orderNumber || ''} has a failed refund.${paymentId ? ` Payment: ${paymentId}` : ''}\nAdmin: ${appAdminUrl()}`,
+          html: `<p>Order <strong>${escapeHtml(order.orderNumber || '')}</strong> has a failed refund.</p>${paymentId ? `<p>Payment: ${escapeHtml(paymentId)}</p>` : ''}<p><a href="${escapeHtml(appAdminUrl())}">Open admin</a></p>`,
+        });
+      }
     }
     await WebhookEvent.updateOne({ _id: eventId, status: 'processing' }, { $set: { status: 'processed' } });
     claimedEventId = null;

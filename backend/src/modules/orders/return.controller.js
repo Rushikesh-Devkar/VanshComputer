@@ -4,6 +4,7 @@ const Order = require('./order.model');
 const ReturnRequest = require('./return.model');
 const { z } = require('zod');
 const service = require('./return.service');
+const { escapeHtml, appAdminUrl, notifyOwner } = require('../../utils/ownerAlerts');
 
 async function requestRefund(paymentId, amount, orderNumber) {
   const response = await fetch(`https://api.razorpay.com/v1/payments/${encodeURIComponent(paymentId)}/refund`, {
@@ -59,6 +60,12 @@ exports.create = async (req, res, next) => {
       reason, details, proofs, refundAmount: service.calculateRefundAmount(order, settings),
       returnChargeDeducted: settings.returnShippingMode === 'deduct_from_refund' ? Number(settings.returnShippingCharge || 0) : 0,
       statusHistory: [{ action: 'requested', detail: 'Return request submitted.' }],
+    });
+    const adminUrl = appAdminUrl();
+    notifyOwner({
+      subject: `New return request ${request.requestNumber}`,
+      text: `New return request ${request.requestNumber}\nOrder: ${request.orderNumber}\nReason: ${request.reason}\nRefund amount: ₹${Number(request.refundAmount || 0).toLocaleString('en-IN')}\nAdmin: ${adminUrl}`,
+      html: `<p><strong>New return request:</strong> ${escapeHtml(request.requestNumber)}</p><p>Order: ${escapeHtml(request.orderNumber)}<br>Reason: ${escapeHtml(request.reason)}<br>Refund amount: ${escapeHtml(`₹${Number(request.refundAmount || 0).toLocaleString('en-IN')}`)}</p><p><a href="${escapeHtml(adminUrl)}">Open admin</a></p>`,
     });
     res.status(201).json({ requestNumber: request.requestNumber, status: request.status, refundAmount: request.refundAmount });
   } catch (error) {
