@@ -80,7 +80,11 @@ exports.reserveAndCreate = async ({ customer, customerAccountId, address, items,
       for (const item of quote.items) {
         const reserved = await Product.updateOne(
           { _id: item.product, status: 'active', stock: { $gte: item.quantity }, ...(item.type === 'refurbished' ? { stock: 1 } : {}) },
-          { $inc: { stock: -item.quantity } }, { session }
+          [
+            { $set: { stock: { $subtract: [{ $ifNull: ['$stock', 0] }, item.quantity] } } },
+            { $set: { status: { $cond: [{ $lte: ['$stock', 0] }, 'sold', 'active'] } } },
+          ],
+          { session }
         );
         if (reserved.modifiedCount !== 1) {
           const error = new Error(`Product stock changed for ${item.name}. Refresh your cart and try again.`); error.status = 409; throw error;
@@ -114,10 +118,54 @@ exports.releaseReservation = async (orderId, status = 'expired') => {
         { new: true, session }
       );
       if (!order) return;
-      for (const item of order.items) await Product.updateOne({ _id: item.product }, { $inc: { stock: item.quantity } }, { session });
+      for (const item of order.items) await Product.updateOne(
+        { _id: item.product },
+        [
+          { $set: { stock: { $add: [{ $ifNull: ['$stock', 0] }, item.quantity] } } },
+          { $set: { status: { $cond: [{ $gt: ['$stock', 0] }, 'active', 'sold'] } } },
+        ],
+        { session }
+      );
     });
     return order;
   } finally { await session.endSession(); }
+};
+
+exports.restockOrder = async (orderId, session = null) => {
+  const restock = async (activeSession) => {
+    const order = await Order.findOneAndUpdate(
+      { _id: orderId, stockRestored: false },
+      { $set: { stockRestored: true } },
+      { new: true, session: activeSession }
+    );
+    if (!order) return { restored: false, order: null };
+
+    for (const item of (order.items || [])) {
+      if (!item.product || !item.quantity) continue;
+      await Product.updateOne(
+        { _id: item.product },
+        [
+          { $set: { stock: { $add: [{ $ifNull: ['$stock', 0] }, item.quantity] } } },
+          { $set: { status: { $cond: [{ $gt: ['$stock', 0] }, 'active', 'sold'] } } },
+        ],
+        { session: activeSession }
+      );
+    }
+    return { restored: true, order };
+  };
+
+  if (session) return restock(session);
+
+  const ownSession = await mongoose.startSession();
+  try {
+    let result;
+    await ownSession.withTransaction(async () => {
+      result = await restock(ownSession);
+    });
+    return result;
+  } finally {
+    await ownSession.endSession();
+  }
 };
 
 exports.expireReservations = async () => {

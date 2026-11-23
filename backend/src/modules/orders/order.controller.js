@@ -503,7 +503,12 @@ exports.webhook = async (req, res, next) => {
       if (refundUpdate.modifiedCount && !refundMatches) notifyRefundReview(order, paymentId, 'Refund amount or currency did not match the requested amount.');
       if (refundUpdate.modifiedCount && refundMatches) {
         orderMails.sendRefundProcessed(order, refundEntity.amount / 100);
-        await ReturnRequest.updateOne({ order: order._id, status: 'refund_pending' }, { $set: { status: 'refunded' }, $push: { statusHistory: { action: 'refunded', detail: 'Refund webhook verified.' } } });
+        const returnRequest = await ReturnRequest.findOne({ order: order._id, status: 'refund_pending' }).select('_id').lean();
+        if (returnRequest) {
+          await ReturnRequest.updateOne({ _id: returnRequest._id, status: 'refund_pending' }, { $set: { status: 'refunded' }, $push: { statusHistory: { action: 'refunded', detail: 'Refund webhook verified.' } } });
+        } else if (fullAmount) {
+          await service.restockOrder(order._id);
+        }
       }
     } else if (order && eventName === 'refund.failed') {
       const refundFailed = await Order.updateOne({ _id: order._id, status: 'refund_pending' }, { $set: { status: 'refund_failed', paymentStatus: 'refund_failed', razorpayRefundId: refundEntity && refundEntity.id || '' }, $push: { statusHistory: { action: 'refund_failed', detail: 'Payment provider reported refund failure.', at: new Date() } } });
@@ -665,6 +670,25 @@ exports.adminUpdate = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
+async function startFullRefund(order, actor) {
+  if (!gatewayReady()) {
+    const error = new Error('Razorpay is not configured.');
+    error.status = 503;
+    throw error;
+  }
+  if (!order.razorpayPaymentId) {
+    const error = new Error('This order has no eligible captured payment to refund.');
+    error.status = 409;
+    throw error;
+  }
+  const refund = await razorpayRequest(`/payments/${encodeURIComponent(order.razorpayPaymentId)}/refund`, {
+    amount: Math.round(order.total * 100), notes: { orderNumber: order.orderNumber },
+  });
+  await Order.updateOne({ _id: order._id, status: 'refund_pending' }, { $set: { razorpayRefundId: refund.id } });
+  return refund;
+}
+exports.startFullRefund = startFullRefund;
+
 exports.adminRefund = async (req, res, next) => {
   try {
     if (!gatewayReady()) return res.status(503).json({ message: 'Razorpay is not configured.' });
@@ -681,11 +705,85 @@ exports.adminRefund = async (req, res, next) => {
       $push: { statusHistory: { action: 'refund_requested', actor: req.user._id, detail: 'Full refund requested.' } },
     }, { new: true });
     if (!refundStarted) return res.status(409).json({ message: 'Refund status changed. Reload before retrying.' });
-    const refund = await razorpayRequest(`/payments/${encodeURIComponent(order.razorpayPaymentId)}/refund`, {
-      amount: Math.round(order.total * 100), notes: { orderNumber: order.orderNumber },
-    });
-    await Order.updateOne({ _id: order._id, status: 'refund_pending' }, { $set: { razorpayRefundId: refund.id } });
+    const refund = await startFullRefund(refundStarted, req.user._id);
     const current = await Order.findById(order._id).select('orderNumber status');
     res.json({ orderNumber: current.orderNumber, status: current.status, refundId: refund.id, message: 'Refund request submitted; final status follows the verified webhook.' });
+  } catch (error) { next(error); }
+};
+
+const cancelSchema = z.object({
+  reason: z.string().trim().max(500).optional().default(''),
+}).strict();
+
+exports.cancelMine = async (req, res, next) => {
+  try {
+    const input = cancelSchema.parse(req.body || {});
+    const orderNumber = String(req.params.orderNumber).trim().toUpperCase();
+    const order = await Order.findOne({ orderNumber, customerAccount: req.user._id });
+    if (!order) return res.status(404).json({ message: 'Order details could not be verified.' });
+
+    if (order.status === 'pending_payment') {
+      const updated = await service.releaseReservation(order._id, 'cancelled');
+      if (!updated) return res.status(409).json({ message: 'Order cannot be cancelled in its current status.' });
+      await Order.updateOne({ _id: order._id }, {
+        $push: {
+          statusHistory: {
+            action: 'cancelled_by_customer',
+            actor: req.user._id,
+            detail: input.reason || 'Customer cancelled pending order.',
+            at: new Date(),
+          },
+        },
+      });
+      const current = await Order.findById(order._id);
+      orderMails.sendOrderCancelled(current);
+      return res.json({
+        orderNumber: current.orderNumber,
+        status: current.status,
+        message: 'Order cancelled.',
+      });
+    }
+
+    if (['paid', 'processing'].includes(order.status)) {
+      const updatedOrder = await Order.findOneAndUpdate(
+        {
+          _id: order._id,
+          customerAccount: req.user._id,
+          status: { $in: ['paid', 'processing'] },
+        },
+        {
+          $set: {
+            status: 'refund_pending',
+            paymentStatus: 'refund_pending',
+            refundRequestedAt: new Date(),
+            refundExpectedAmount: order.total,
+          },
+          $push: {
+            statusHistory: {
+              action: 'cancelled_by_customer',
+              actor: req.user._id,
+              detail: input.reason || 'Customer cancelled order.',
+              at: new Date(),
+            },
+          },
+        },
+        { new: true }
+      );
+      if (!updatedOrder) {
+        return res.status(409).json({ message: 'Order cannot be cancelled in its current status.' });
+      }
+
+      const refund = await startFullRefund(updatedOrder, req.user._id);
+      orderMails.sendOrderCancelled(updatedOrder);
+
+      return res.json({
+        orderNumber: updatedOrder.orderNumber,
+        status: updatedOrder.status,
+        refundId: refund?.id,
+        message: 'Order cancelled and refund requested.',
+      });
+    }
+
+    return res.status(409).json({ message: 'Order cannot be cancelled in its current status.' });
   } catch (error) { next(error); }
 };

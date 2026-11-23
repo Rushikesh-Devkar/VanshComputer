@@ -280,6 +280,14 @@ async function loadOrders() {
       [['Subtotal', order.subtotal], ['Discount', -Number(order.discount || 0)], ['Delivery', order.shippingCharge]].forEach(([label, amount]) => { const line = document.createElement('div'); line.className = 'order-total'; const key = document.createElement('span'); key.textContent = label; const value = document.createElement('span'); value.textContent = `${Number(amount) < 0 ? '−' : ''}${money(Math.abs(Number(amount) || 0))}`; line.append(key, value); totalList.append(line); });
       const grand = document.createElement('div'); grand.className = 'order-total grand'; const grandLabel = document.createElement('span'); grandLabel.textContent = 'Order total'; const grandValue = document.createElement('span'); grandValue.textContent = money(order.total); grand.append(grandLabel, grandValue); totalList.append(grand); totals.append(totalList);
       const payment = section('Payment & tracking'); [['Razorpay order', order.razorpayOrderId || 'Not created'], ['Payment ID', order.razorpayPaymentId || 'Not captured'], ['Refund ID', order.razorpayRefundId || 'None'], ['Courier', order.courierName || 'Not entered'], ['Tracking', order.trackingNumber || 'Not entered']].forEach(([label, value]) => { const p = document.createElement('p'); p.textContent = `${label}: ${value}`; payment.append(p); });
+      const cancelEntry = (order.statusHistory || []).find((entry) => entry.action === 'cancelled_by_customer');
+      if (cancelEntry) {
+        const cancelNote = document.createElement('p');
+        cancelNote.style.color = '#b42318';
+        cancelNote.style.fontWeight = 'bold';
+        cancelNote.textContent = `Customer cancellation: ${cancelEntry.detail || 'Cancelled by customer'}${cancelEntry.at ? ' (' + new Date(cancelEntry.at).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' }) + ')' : ''}`;
+        payment.append(cancelNote);
+      }
       sections.append(customer, address, products, totals, payment); summary.append(heading, sections); row.append(summary);
       const actions = document.createElement('div'); actions.className = 'order-actions';
       const update = async (status, extra = {}) => { await request('/api/orders/admin/' + encodeURIComponent(order._id), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status, ...extra }) }); await loadOrders(); };
@@ -369,7 +377,31 @@ function renderReturnActions(item, container) {
   if (item.status === 'requested') { action('Approve', 'approve', false, true); action('Reject', 'reject', true); }
   if (['awaiting_return_shipment', 'return_in_transit'].includes(item.status)) action('Mark received', 'received', false, true);
   if (item.status === 'received') { action('Accept inspection', 'inspection-accepted', false, true); action('Reject inspection', 'inspection-rejected', true, true); }
-  if (item.status === 'inspection_accepted') action('Issue refund', 'refund');
+  if (item.status === 'inspection_accepted') {
+    const restockLabel = document.createElement('label');
+    restockLabel.style.cssText = 'display:block;margin:8px 0';
+    const restock = document.createElement('input');
+    restock.type = 'checkbox';
+    restock.checked = false;
+    restockLabel.append(restock, ' Restock item');
+    container.append(restockLabel);
+    const refundButton = document.createElement('button');
+    refundButton.type = 'button';
+    refundButton.textContent = 'Issue refund';
+    refundButton.addEventListener('click', async () => {
+      const note = prompt('Admin note (optional)') || '';
+      try {
+        await request(`/api/orders/admin/returns/${encodeURIComponent(item._id)}/refund`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ note, restock: restock.checked }),
+        });
+        await loadReturns();
+        if ($('returnDetailModal').open) $('returnDetailModal').close();
+      } catch (error) { alert(error.message); }
+    });
+    container.append(refundButton);
+  }
   if (['rejected', 'refunded', 'inspection_rejected'].includes(item.status)) action('Close', 'close');
 }
 

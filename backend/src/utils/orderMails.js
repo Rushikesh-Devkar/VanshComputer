@@ -95,6 +95,19 @@ function sendReturnStatus(returnRequest, order, status, reason = '') {
   }
 }
 
+function sendOrderCancelled(order, refundInfo = '') {
+  const link = orderDetailLink(order);
+  const isRefund = order?.status === 'refund_pending' || order?.paymentStatus === 'refund_pending' || order?.paymentStatus === 'captured';
+  const refundNotice = refundInfo || (isRefund
+    ? 'A full refund has been requested and will be processed back to your original payment method.'
+    : '');
+  sendCustomerMail(order, {
+    subject: `Order cancelled: ${order?.orderNumber || ''}`,
+    text: `Your order ${order?.orderNumber || ''} has been cancelled.${refundNotice ? `\n${refundNotice}` : ''}\nView order: ${link}`,
+    html: `<p>Your order <strong>${escapeHtml(order?.orderNumber || '')}</strong> has been cancelled.</p>${refundNotice ? `<p>${escapeHtml(refundNotice)}</p>` : ''}<p><a href="${escapeHtml(link)}">View order</a></p>`,
+  });
+}
+
 module.exports = {
   sendOrderConfirmed,
   sendShipped,
@@ -102,5 +115,6 @@ module.exports = {
   sendDeliveryOtp,
   sendRefundProcessed,
   sendReturnStatus,
+  sendOrderCancelled,
   sendCustomerMail,
 };

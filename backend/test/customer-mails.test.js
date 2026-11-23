@@ -64,8 +64,31 @@ test('customer mails skip orders and returns without email', async () => {
     orderMails.sendOrderConfirmed({ orderNumber: 'VC1', customer: {} });
     orderMails.sendRefundProcessed({ orderNumber: 'VC1', customer: {} }, 100);
     orderMails.sendReturnStatus({ requestNumber: 'RR1' }, { customer: {} }, 'approved');
+    orderMails.sendOrderCancelled({ orderNumber: 'VC1', customer: {} });
     await flushMail();
     assert.equal(calls, 0);
+  } finally {
+    mailer.sendMail = originalSendMail;
+  }
+});
+
+test('customer cancelled mail sends cancellation notice and refund text when applicable', async () => {
+  const originalSendMail = mailer.sendMail;
+  const deliveries = [];
+  mailer.sendMail = async (value) => { deliveries.push(value); return true; };
+  try {
+    const order = {
+      orderNumber: 'VC20261121-CANCELLED',
+      customer: { email: 'customer@example.com' },
+      status: 'refund_pending',
+      paymentStatus: 'refund_pending',
+    };
+    orderMails.sendOrderCancelled(order);
+    await flushMail();
+    assert.equal(deliveries.length, 1);
+    assert.equal(deliveries[0].to, 'customer@example.com');
+    assert.equal(deliveries[0].subject.includes('VC20261121-CANCELLED'), true);
+    assert.equal(deliveries[0].text.includes('refund'), true);
   } finally {
     mailer.sendMail = originalSendMail;
   }

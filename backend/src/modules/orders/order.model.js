@@ -64,6 +64,7 @@ const orderSchema = new mongoose.Schema({
   refundRequestedAt: { type: Date, default: null },
   refundAmount: { type: Number, default: null, min: 0 },
   refundExpectedAmount: { type: Number, default: null, min: 0 },
+  stockRestored: { type: Boolean, default: false, index: true },
   deliveredAt: { type: Date, default: null, index: true },
   reservationExpiresAt: { type: Date, required: true, index: true },
   courierName: { type: String, default: '' },

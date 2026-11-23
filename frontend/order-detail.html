@@ -102,6 +102,67 @@ function render(order){
       h('p',{class:'checkout-error'},'Share this OTP only with the delivery person when you receive your parcel.')
     ));
   }
+  const cancellable = ['pending_payment', 'paid', 'processing'].includes(order.status);
+  if (cancellable) {
+    const cancelSection = h('section', { class: 'flow-card' },
+      h('h3', {}, 'Cancel order'),
+      h('p', { class: 'product-specs' }, 'Need to cancel? You can cancel your order before it is shipped.'),
+      h('button', { class: 'checkout-ghost full cancel-order-btn', type: 'button', style: 'color:#d71920;border-color:#d71920;font-weight:600' }, 'Cancel order')
+    );
+    const cancelDialog = h('dialog', { class: 'flow-card', id: 'cancelOrderDialog', style: 'max-width:440px;border:1px solid #e5e7eb;border-radius:12px;padding:24px;box-shadow:0 10px 25px rgba(0,0,0,0.2)' },
+      h('form', { method: 'dialog' },
+        h('h3', { style: 'margin-top:0' }, 'Cancel order ' + order.orderNumber),
+        h('p', { class: 'product-specs' }, order.status === 'pending_payment' ? 'This will release your reserved items and cancel the order.' : 'This will cancel your order, request a full refund, and restock the items.'),
+        h('label', { class: 'checkout-field', style: 'display:block;margin:16px 0' },
+          h('span', { style: 'display:block;margin-bottom:6px;font-weight:600' }, 'Reason for cancellation'),
+          h('select', { name: 'reason', required: true, style: 'width:100%;padding:10px;border-radius:8px;border:1px solid #ccc' },
+            h('option', { value: '' }, 'Select a reason'),
+            h('option', { value: 'Ordered by mistake' }, 'Ordered by mistake'),
+            h('option', { value: 'Found better price elsewhere' }, 'Found better price elsewhere'),
+            h('option', { value: 'Delivery time too long' }, 'Delivery time too long'),
+            h('option', { value: 'Changed mind' }, 'Changed mind'),
+            h('option', { value: 'Other' }, 'Other')
+          )
+        ),
+        h('div', { style: 'display:flex;gap:12px;justify-content:flex-end;margin-top:20px' },
+          h('button', { type: 'button', class: 'checkout-ghost', onclick: () => cancelDialog.close() }, 'Keep order'),
+          h('button', { type: 'submit', class: 'checkout-btn', style: 'background:#d71920;color:#fff' }, 'Confirm cancellation')
+        ),
+        h('p', { class: 'checkout-status', role: 'status', style: 'margin-top:12px' })
+      )
+    );
+    cancelSection.querySelector('.cancel-order-btn').addEventListener('click', () => {
+      cancelDialog.querySelector('[role=status]').textContent = '';
+      cancelDialog.querySelector('button[type=submit]').disabled = false;
+      if (cancelDialog.showModal) cancelDialog.showModal();
+      else cancelDialog.setAttribute('open', '');
+    });
+    cancelDialog.querySelector('form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const reasonVal = e.target.elements.reason.value;
+      if (!reasonVal) return;
+      const submitBtn = e.target.querySelector('button[type=submit]');
+      const statusEl = cancelDialog.querySelector('[role=status]');
+      submitBtn.disabled = true;
+      statusEl.textContent = 'Cancelling order…';
+      try {
+        const reply = await api('/api/orders/mine/' + encodeURIComponent(order.orderNumber) + '/cancel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason: reasonVal }),
+        });
+        statusEl.textContent = reply.message || 'Order cancelled successfully.';
+        setTimeout(() => {
+          cancelDialog.close();
+          api('/api/orders/mine/' + encodeURIComponent(order.orderNumber)).then(render);
+        }, 1200);
+      } catch (err) {
+        statusEl.textContent = err.message;
+        submitBtn.disabled = false;
+      }
+    });
+    aside.append(cancelSection, cancelDialog);
+  }
   root.replaceChildren(left,aside);
   returnForm(order,aside);
   returnDetails(order,aside);

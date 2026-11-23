@@ -4,6 +4,7 @@ const Order = require('./order.model');
 const ReturnRequest = require('./return.model');
 const { z } = require('zod');
 const service = require('./return.service');
+const orderService = require('./order.service');
 const { escapeHtml, appAdminUrl, notifyOwner } = require('../../utils/ownerAlerts');
 const orderMails = require('../../utils/orderMails');
 
@@ -205,11 +206,13 @@ exports.action = async (req, res, next) => {
     if (action === 'reject' || action === 'inspection-rejected') z.string().trim().min(1).parse(req.body.reason);
     if (!(returnTransitions[action] || []).includes(request.status)) return res.status(409).json({ message: 'Invalid return status transition.' });
     if (action === 'refund') {
+      const refundInput = z.object({ restock: z.boolean().optional().default(false) }).passthrough().parse(req.body || {});
       if (!request.order.razorpayPaymentId) return res.status(409).json({ message: 'No captured payment is available for refund.' });
       if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) return res.status(503).json({ message: 'Payment provider is not configured.' });
       const refund = await requestRefund(request.order.razorpayPaymentId, request.refundAmount, request.order.orderNumber);
       request.order.refundExpectedAmount = request.refundAmount; request.order.refundAmount = request.refundAmount;
       request.order.razorpayRefundId = refund.id; request.order.status = 'refund_pending'; request.order.paymentStatus = 'refund_pending'; request.order.refundRequestedAt = new Date(); await request.order.save();
+      if (refundInput.restock) await orderService.restockOrder(request.order._id);
     }
     if (action === 'seen') request.adminSeenAt = new Date();
     if (['approve', 'reject', 'refund'].includes(action)) {

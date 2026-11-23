@@ -8,6 +8,7 @@ const { itemsSchema, addressSchema, trackingSchema } = require('../src/modules/o
 const service = require('../src/modules/orders/order.service');
 const controller = require('../src/modules/orders/order.controller');
 const { buildTrackingUrl, validateHttpsUrl } = require('../src/modules/orders/tracking');
+const orderMails = require('../src/utils/orderMails');
 
 const validAddress = { line1: '12 Market Road', line2: '', city: 'Pimpri', district: 'Pune', state: 'Maharashtra', pinCode: '411018' };
 const productId = '64b000000000000000000001';
@@ -15,7 +16,7 @@ const baseProduct = { _id: new mongoose.Types.ObjectId(productId), name: 'Laptop
 
 function mockQuoteData(product, settings) {
   Product.find = () => ({ select() { return this; }, session() { return this; }, lean: async () => [product] });
-  ShippingSettings.findById = () => ({ session() { return this; }, lean: async () => settings });
+  ShippingSettings.findById = () => ({ session() { return this; }, select() { return this; }, lean: async () => settings });
 }
 
 test('courier tracking URLs are HTTPS and never accept javascript URLs', () => {
@@ -25,6 +26,41 @@ test('courier tracking URLs are HTTPS and never accept javascript URLs', () => {
   assert.equal(validateHttpsUrl('javascript:alert(1)'), false);
   assert.equal(validateHttpsUrl('http://courier.example/track/{awb}'), false);
   assert.equal(validateHttpsUrl('https://courier.example/track/{awb}'), true);
+});
+
+test('restockOrder is idempotent and restores refurbished stock to 1', async () => {
+  const originalFindOneAndUpdate = Order.findOneAndUpdate;
+  const originalProductUpdate = Product.updateOne;
+  let stockUpdate = null;
+  let claimCount = 0;
+  try {
+    Order.findOneAndUpdate = async (filter) => {
+      claimCount++;
+      if (filter.stockRestored === false && claimCount === 1) {
+        return {
+          _id: 'order-refurbished-id',
+          items: [{ product: productId, quantity: 1, type: 'refurbished' }],
+        };
+      }
+      return null;
+    };
+    Product.updateOne = async (filter, update) => {
+      stockUpdate = { filter, update };
+      return { modifiedCount: 1 };
+    };
+    const session = {};
+    const first = await service.restockOrder('order-refurbished-id', session);
+    const second = await service.restockOrder('order-refurbished-id', session);
+    assert.equal(first.restored, true);
+    assert.equal(second.restored, false);
+    assert.equal(claimCount, 2);
+    assert.equal(stockUpdate.filter._id, productId);
+    assert.deepEqual(stockUpdate.update[0].$set.stock.$add, [{ $ifNull: ['$stock', 0] }, 1]);
+    assert.equal(stockUpdate.update[1].$set.status.$cond[1], 'active');
+  } finally {
+    Order.findOneAndUpdate = originalFindOneAndUpdate;
+    Product.updateOne = originalProductUpdate;
+  }
 });
 
 test('checkout item schema rejects client supplied prices and duplicate products', () => {
@@ -531,5 +567,300 @@ test('payment.failed webhook keeps the reservation so the customer can retry in 
     assert.deepEqual(body, { received: true });
   } finally {
     WebhookEvent.create = saved.create; WebhookEvent.updateOne = saved.updateOne; Order.findOne = saved.findOne; Order.updateOne = saved.orderUpdate; service.releaseReservation = saved.release;
+  }
+});
+
+test('cancel pending: cancelMine cancels pending_payment order, releases reservation, and adds statusHistory', async () => {
+  const originalFindOne = Order.findOne;
+  const originalFindById = Order.findById;
+  const originalUpdateOne = Order.updateOne;
+  const originalRelease = service.releaseReservation;
+  let releasedOrderId = null;
+  let statusUpdate = null;
+  const order = {
+    _id: 'order-pending-id',
+    orderNumber: 'VC20261121-PENDING1',
+    customerAccount: 'customer-1',
+    status: 'pending_payment',
+    paymentStatus: 'created',
+  };
+  Order.findOne = async (filter) => {
+    if (filter.orderNumber === 'VC20261121-PENDING1' && filter.customerAccount === 'customer-1') {
+      return { ...order };
+    }
+    return null;
+  };
+  service.releaseReservation = async (orderId, status) => {
+    releasedOrderId = orderId;
+    return { ...order, status: 'cancelled' };
+  };
+  Order.updateOne = async (filter, update) => {
+    statusUpdate = update;
+    return { modifiedCount: 1 };
+  };
+  Order.findById = (id) => ({
+    select: async () => ({ ...order, status: 'cancelled' }),
+    lean: async () => ({ ...order, status: 'cancelled' }),
+    then(resolve) { resolve({ ...order, status: 'cancelled' }); },
+  });
+  let statusCode = 200;
+  let responseBody = null;
+  const res = {
+    status(code) { statusCode = code; return this; },
+    json(value) { responseBody = value; return this; },
+  };
+  try {
+    await controller.cancelMine({
+      params: { orderNumber: 'VC20261121-PENDING1' },
+      body: { reason: 'Changed my mind' },
+      user: { _id: 'customer-1', role: 'customer' },
+    }, res, (error) => { throw error; });
+
+    assert.equal(releasedOrderId, 'order-pending-id');
+    assert.equal(statusCode, 200);
+    assert.equal(responseBody.status, 'cancelled');
+    assert.equal(responseBody.orderNumber, 'VC20261121-PENDING1');
+    assert.equal(statusUpdate.$push.statusHistory.action, 'cancelled_by_customer');
+    assert.equal(statusUpdate.$push.statusHistory.detail, 'Changed my mind');
+  } finally {
+    Order.findOne = originalFindOne;
+    Order.findById = originalFindById;
+    Order.updateOne = originalUpdateOne;
+    service.releaseReservation = originalRelease;
+  }
+});
+
+test('cancel paid: moves paid order to refund_pending, starts full refund, and emails customer', async () => {
+  const originalFindOne = Order.findOne;
+  const originalFindOneAndUpdate = Order.findOneAndUpdate;
+  const originalUpdateOne = Order.updateOne;
+  const originalRestock = service.restockOrder;
+  const originalSendCancelled = orderMails.sendOrderCancelled;
+  const originalFetch = global.fetch;
+  const saved = {
+    mode: process.env.PAYMENT_MODE,
+    keyId: process.env.RAZORPAY_KEY_ID,
+    keySecret: process.env.RAZORPAY_KEY_SECRET,
+  };
+  process.env.PAYMENT_MODE = 'test';
+  process.env.RAZORPAY_KEY_ID = 'rzp_test_example123';
+  process.env.RAZORPAY_KEY_SECRET = 'test-secret';
+
+  const order = {
+    _id: 'order-paid-id',
+    orderNumber: 'VC20261121-PAID1234',
+    customerAccount: 'customer-1',
+    status: 'paid',
+    paymentStatus: 'captured',
+    razorpayPaymentId: 'pay_test123',
+    total: 12500,
+    items: [{ product: productId, quantity: 1 }],
+  };
+  let emailSentTo = null;
+  let refundPayload = null;
+
+  Order.findOne = async (filter) => {
+    if (filter.orderNumber === 'VC20261121-PAID1234' && filter.customerAccount === 'customer-1') {
+      return { ...order };
+    }
+    return null;
+  };
+  Order.findOneAndUpdate = async (filter, update) => {
+    if (filter._id === 'order-paid-id' && filter.status.$in?.includes('paid')) {
+      return {
+        ...order,
+        status: update.$set.status,
+        paymentStatus: update.$set.paymentStatus,
+        refundExpectedAmount: update.$set.refundExpectedAmount,
+        statusHistory: [{ action: update.$push.statusHistory.action, detail: update.$push.statusHistory.detail }],
+      };
+    }
+    return null;
+  };
+  Order.updateOne = async () => ({ modifiedCount: 1 });
+  global.fetch = async (url, options) => {
+    refundPayload = JSON.parse(options.body);
+    return {
+      ok: true,
+      json: async () => ({ id: 'rfnd_test999', entity: 'refund', amount: refundPayload.amount, status: 'processed' }),
+    };
+  };
+  service.restockOrder = async () => {};
+  orderMails.sendOrderCancelled = (targetOrder) => {
+    emailSentTo = targetOrder.orderNumber;
+  };
+
+  let statusCode = 200;
+  let responseBody = null;
+  const res = {
+    status(code) { statusCode = code; return this; },
+    json(value) { responseBody = value; return this; },
+  };
+  try {
+    await controller.cancelMine({
+      params: { orderNumber: 'VC20261121-PAID1234' },
+      body: { reason: 'Found better price' },
+      user: { _id: 'customer-1', role: 'customer' },
+    }, res, (error) => { throw error; });
+
+    assert.equal(statusCode, 200);
+    assert.equal(responseBody.status, 'refund_pending');
+    assert.equal(responseBody.refundId, 'rfnd_test999');
+    assert.equal(refundPayload.amount, 1250000);
+    assert.equal(emailSentTo, 'VC20261121-PAID1234');
+  } finally {
+    Order.findOne = originalFindOne;
+    Order.findOneAndUpdate = originalFindOneAndUpdate;
+    Order.updateOne = originalUpdateOne;
+    service.restockOrder = originalRestock;
+    orderMails.sendOrderCancelled = originalSendCancelled;
+    global.fetch = originalFetch;
+    for (const [k, v] of Object.entries(saved)) {
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+  }
+});
+
+test('cancel shipped (409): cancelMine returns 409 for already shipped order', async () => {
+  const originalFindOne = Order.findOne;
+  const order = {
+    _id: 'order-shipped-id',
+    orderNumber: 'VC20261121-SHIP1234',
+    customerAccount: 'customer-1',
+    status: 'shipped',
+  };
+  Order.findOne = async () => ({ ...order });
+  let statusCode = null;
+  let responseBody = null;
+  const res = {
+    status(code) { statusCode = code; return this; },
+    json(value) { responseBody = value; return this; },
+  };
+  try {
+    await controller.cancelMine({
+      params: { orderNumber: 'VC20261121-SHIP1234' },
+      body: { reason: 'Need to cancel' },
+      user: { _id: 'customer-1', role: 'customer' },
+    }, res, (error) => { throw error; });
+
+    assert.equal(statusCode, 409);
+    assert.equal(responseBody.message, 'Order cannot be cancelled in its current status.');
+  } finally {
+    Order.findOne = originalFindOne;
+  }
+});
+
+test('cancel another users order (404): cancelMine returns 404 for order owned by another user', async () => {
+  const originalFindOne = Order.findOne;
+  let queryUsed = null;
+  Order.findOne = async (filter) => {
+    queryUsed = filter;
+    return null;
+  };
+  let statusCode = null;
+  let responseBody = null;
+  const res = {
+    status(code) { statusCode = code; return this; },
+    json(value) { responseBody = value; return this; },
+  };
+  try {
+    await controller.cancelMine({
+      params: { orderNumber: 'VC20261121-OTHER123' },
+      body: { reason: 'Testing cross-tenant cancel' },
+      user: { _id: 'customer-hacker', role: 'customer' },
+    }, res, (error) => { throw error; });
+
+    assert.equal(statusCode, 404);
+    assert.deepEqual(queryUsed, { orderNumber: 'VC20261121-OTHER123', customerAccount: 'customer-hacker' });
+    assert.equal(responseBody.message, 'Order details could not be verified.');
+  } finally {
+    Order.findOne = originalFindOne;
+  }
+});
+
+test('double click race: cancelMine allows only one cancellation and returns 409 for the other', async () => {
+  const originalFindOne = Order.findOne;
+  const originalFindOneAndUpdate = Order.findOneAndUpdate;
+  const originalUpdateOne = Order.updateOne;
+  const originalRestock = service.restockOrder;
+  const originalSendCancelled = orderMails.sendOrderCancelled;
+  const originalFetch = global.fetch;
+  const saved = {
+    mode: process.env.PAYMENT_MODE,
+    keyId: process.env.RAZORPAY_KEY_ID,
+    keySecret: process.env.RAZORPAY_KEY_SECRET,
+  };
+  process.env.PAYMENT_MODE = 'test';
+  process.env.RAZORPAY_KEY_ID = 'rzp_test_example123';
+  process.env.RAZORPAY_KEY_SECRET = 'test-secret';
+
+  const order = {
+    _id: 'order-race-id',
+    orderNumber: 'VC20261121-RACE1234',
+    customerAccount: 'customer-1',
+    status: 'paid',
+    paymentStatus: 'captured',
+    razorpayPaymentId: 'pay_race123',
+    total: 12500,
+    items: [{ product: productId, quantity: 1 }],
+  };
+  let currentStatus = 'paid';
+  let refundCount = 0;
+
+  Order.findOne = async () => ({ ...order, status: currentStatus });
+  Order.findOneAndUpdate = async (filter, update) => {
+    if (filter.status.$in?.includes(currentStatus)) {
+      currentStatus = update.$set.status;
+      return {
+        ...order,
+        status: currentStatus,
+        paymentStatus: update.$set.paymentStatus,
+        statusHistory: [],
+      };
+    }
+    return null;
+  };
+  Order.updateOne = async () => ({ modifiedCount: 1 });
+  global.fetch = async () => {
+    refundCount++;
+    return {
+      ok: true,
+      json: async () => ({ id: 'rfnd_race', status: 'processed', amount: 1250000 }),
+    };
+  };
+  service.restockOrder = async () => {};
+  orderMails.sendOrderCancelled = () => {};
+
+  const makeReq = () => {
+    let statusCode = 200;
+    let body = null;
+    const res = {
+      status(code) { statusCode = code; return this; },
+      json(value) { body = value; return this; },
+    };
+    return controller.cancelMine({
+      params: { orderNumber: 'VC20261121-RACE1234' },
+      body: { reason: 'Double click cancel' },
+      user: { _id: 'customer-1', role: 'customer' },
+    }, res, (err) => { throw err; }).then(() => ({ statusCode, body }));
+  };
+
+  try {
+    const [r1, r2] = await Promise.all([makeReq(), makeReq()]);
+    const codes = [r1.statusCode, r2.statusCode].sort();
+    assert.deepEqual(codes, [200, 409]);
+    assert.equal(refundCount, 1);
+  } finally {
+    Order.findOne = originalFindOne;
+    Order.findOneAndUpdate = originalFindOneAndUpdate;
+    Order.updateOne = originalUpdateOne;
+    service.restockOrder = originalRestock;
+    orderMails.sendOrderCancelled = originalSendCancelled;
+    global.fetch = originalFetch;
+    for (const [k, v] of Object.entries(saved)) {
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
   }
 });

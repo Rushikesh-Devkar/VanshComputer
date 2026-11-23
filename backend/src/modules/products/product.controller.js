@@ -72,7 +72,18 @@ exports.create = async (req, res, next) => {
 exports.update = async (req, res, next) => {
   try {
     v.objectId.parse(req.params.id);
-    const product = await Product.findByIdAndUpdate(req.params.id, v.productUpdate.parse(req.body), {
+    const fields = v.productUpdate.parse(req.body);
+    const existing = await Product.findById(req.params.id).select('stock status');
+    if (!existing) return res.status(404).json({ message: 'Product not found' });
+
+    if (fields.stock != null) {
+      if (fields.stock <= 0) fields.status = 'sold';
+      else if (fields.status !== 'archived' && (existing.status === 'sold' || fields.status === 'sold')) fields.status = 'active';
+    } else if (fields.status == null && existing.status !== 'archived') {
+      fields.status = existing.stock <= 0 ? 'sold' : 'active';
+    }
+
+    const product = await Product.findByIdAndUpdate(req.params.id, fields, {
       new: true,
       runValidators: true,
     });
